@@ -3,156 +3,250 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>마곡동 3D 디지털트윈 (실제 건물)</title>
+<title>마곡동 3D 에너지 디지털트윈 + ESS</title>
 <script src="https://cesium.com/downloads/cesiumjs/releases/1.118/Build/Cesium/Cesium.js"></script>
 <link href="https://cesium.com/downloads/cesiumjs/releases/1.118/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap');
-  html, body, #cesiumContainer { width:100%; height:100%; margin:0; padding:0; overflow:hidden; }
-  body { font-family:'Gowun Dodum', sans-serif; }
-  #panel {
-    position:absolute; top:16px; left:16px; z-index:10;
-    background:rgba(10,14,26,.88); backdrop-filter:blur(10px);
-    border:1px solid #283149; border-radius:14px; padding:18px 20px;
-    color:#e8eaf0; max-width:300px;
-  }
-  #panel h1 {
-    font-family:'Black Han Sans'; font-size:20px; line-height:1.2;
-    background:linear-gradient(120deg,#4dd0e1,#ff7043);
-    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-  }
-  #panel .sub { font-size:12px; color:#8a93a8; margin:6px 0 14px; }
-  .btn {
-    display:block; width:100%; margin:6px 0; padding:10px 14px;
-    background:#161d31; color:#aeb6c8; border:1px solid #283149;
-    border-radius:9px; font-family:inherit; font-size:13px; cursor:pointer;
-    transition:all .2s; text-align:left;
-  }
-  .btn:hover { background:#1d2740; color:#fff; }
-  .btn.active { background:linear-gradient(120deg,#1e3a5f,#2a3f6b); color:#fff; border-color:#4dd0e1; }
-  .legend { margin-top:14px; font-size:12px; }
-  .lg { display:flex; align-items:center; gap:7px; margin:5px 0; }
-  .dot { width:12px; height:12px; border-radius:3px; }
-  .hint { margin-top:14px; font-size:11px; color:#5a637a; line-height:1.5; }
-  #loading {
-    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-    z-index:20; color:#4dd0e1; font-size:18px; font-family:'Black Han Sans';
-  }
+  html,body,#cesiumContainer{width:100%;height:100%;margin:0;padding:0;overflow:hidden}
+  body{font-family:'Gowun Dodum',sans-serif;background:#05070f}
+  #panel{position:absolute;top:16px;left:16px;z-index:10;background:rgba(8,12,24,.85);
+    backdrop-filter:blur(16px);border:1px solid rgba(94,234,212,.25);border-radius:18px;
+    padding:18px 20px;color:#eef2fb;width:330px;max-height:94vh;overflow-y:auto;
+    box-shadow:0 8px 40px rgba(0,0,0,.55)}
+  #panel h1{font-family:'Black Han Sans';font-size:20px;line-height:1.2;
+    background:linear-gradient(120deg,#5eead4,#60a5fa,#f0883e);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  #panel .sub{font-size:12px;color:#7e8aa6;margin:6px 0 14px}
+  .section{margin:12px 0;padding:11px 13px;background:rgba(15,21,37,.6);border:1px solid #1f2840;border-radius:12px}
+  .section-title{font-size:12px;color:#5eead4;font-weight:bold;margin-bottom:7px}
+  .row{display:flex;justify-content:space-between;align-items:center;margin:4px 0;font-size:13px}
+  .row .v{color:#fff;font-family:'Black Han Sans';font-size:15px}
+  input[type=range]{width:100%;accent-color:#5eead4;margin-top:3px}
+  #playBtn{padding:7px 12px;background:linear-gradient(120deg,#5eead4,#60a5fa);color:#0a0e1a;
+    border:none;border-radius:8px;font-family:'Black Han Sans';font-size:12px;cursor:pointer;margin-top:6px}
+  .essBtn{width:100%;padding:11px;border:none;border-radius:10px;font-family:'Black Han Sans';
+    font-size:14px;cursor:pointer;transition:.25s;margin-top:4px}
+  .essOff{background:rgba(40,48,73,.8);color:#b8c0d4;border:1px solid #2a3450}
+  .essOn{background:linear-gradient(120deg,#ffd54f,#ff8a4d);color:#1a1205;
+    box-shadow:0 0 20px rgba(255,213,79,.4)}
+  .gradbar{height:10px;border-radius:3px;background:linear-gradient(90deg,#3a6ad4,#5eead4,#ffd54f,#ff8a4d,#ff3030);margin:5px 0}
+  .gradlbl{display:flex;justify-content:space-between;font-size:10px;color:#7e8aa6}
+  .stat{display:flex;justify-content:space-between;align-items:baseline;margin:3px 0;font-size:12px}
+  .stat .big{font-family:'Black Han Sans';font-size:17px;color:#5eead4}
+  .stat .save{color:#ffd54f}
+  .hint{margin-top:8px;font-size:10.5px;color:#5a637a;line-height:1.5}
+  #loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;
+    color:#5eead4;font-size:18px;font-family:'Black Han Sans'}
+  #essStatus{font-size:11px;color:#ffd54f;margin-top:5px;min-height:14px}
 </style>
 </head>
 <body>
 <div id="cesiumContainer"></div>
-<div id="loading">실제 건물 불러오는 중...</div>
+<div id="loading">디지털트윈 로딩 중...</div>
 
 <div id="panel">
-  <h1>마곡동 에너지<br>디지털트윈</h1>
-  <div class="sub">실제 3D 건물 · OSM Buildings</div>
-  <button class="btn active" data-mode="cluster">🏢 군집 유형</button>
-  <button class="btn" data-mode="total">⚡ 연간 에너지량</button>
-  <button class="btn" data-mode="summer">☀️ 여름 피크 집중도</button>
-  <div class="legend" id="legend"></div>
-  <button class="btn" id="rotateBtn" style="margin-top:14px;">🔄 자동 회전</button>
-  <div class="hint">실제 건물 형태 위에 우리 에너지 데이터를 색으로 입혔습니다.
-    색은 가장 가까운 분석 격자 기준(위치 매칭이라 근사).</div>
+  <h1>마곡동 에너지<br>디지털트윈 + ESS</h1>
+  <div class="sub">월·기온 시뮬레이션 + 공용 ESS 피크대응</div>
+
+  <div class="section">
+    <div class="section-title">📅 월 (1~12월)</div>
+    <div class="row"><span id="monthLabel">6월</span><span class="v" id="monthTemp">23.4°C</span></div>
+    <input type="range" id="monthSlider" min="1" max="12" value="6" step="1">
+    <button id="playBtn">▶ 1년 재생</button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🌡 기온 시나리오 (현재 대비)</div>
+    <div class="row"><span>오프셋</span><span class="v" id="tempOffsetLabel">+0.0°C</span></div>
+    <input type="range" id="tempOffset" min="-5" max="10" value="0" step="0.5">
+  </div>
+
+  <div class="section" style="border-color:rgba(255,213,79,.3)">
+    <div class="section-title" style="color:#ffd54f">🔋 공용 ESS (마곡 중앙)</div>
+    <button id="essBtn" class="essBtn essOff">⚡ ESS 설치하기</button>
+    <div id="essStatus"></div>
+    <div class="row" style="margin-top:8px"><span>배터리 용량</span><span class="v" id="capLabel">일에너지 10%</span></div>
+    <input type="range" id="capSlider" min="1" max="30" value="10" step="1">
+  </div>
+
+  <div class="section">
+    <div class="section-title">🎨 에너지 색상</div>
+    <div class="gradbar"></div>
+    <div class="gradlbl"><span>적게씀</span><span>많이씀</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📊 통계</div>
+    <div class="stat"><span>평균 에너지</span><span class="big" id="statAvg">-</span></div>
+    <div class="stat"><span>피크 (최대격자)</span><span class="big" id="statPeak">-</span></div>
+    <div class="stat"><span>ESS 피크저감</span><span class="big save" id="statSave">OFF</span></div>
+  </div>
+  <div class="hint">ESS 켜면 중앙 거점이 충방전하며(낮 방전·밤 충전), 주변 건물 피크가 완화됩니다.
+    저감 수치는 월별 데이터 기반 근사입니다.</div>
 </div>
 
 <script>
-// ====== 본인 Cesium Ion 토큰으로 교체! (cesium.com 무료 가입) ======
 Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI5Nzk0MzgyNS03N2M4LTRlZTgtOTQ2NS04OGM4ZDIyMzI1NzEiLCJpZCI6NDM3MDg0LCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3Nzk4ODY0NTl9.J_plEGjQGM9pPNn9cWunUY1Ac-iePAt9MzHnATHc1kY';
+const viewer = new Cesium.Viewer('cesiumContainer',{
+  terrain:Cesium.Terrain.fromWorldTerrain(),animation:false,timeline:false,geocoder:false,
+  homeButton:false,navigationHelpButton:false,baseLayerPicker:false,fullscreenButton:false,
+  sceneModePicker:false,selectionIndicator:false,infoBox:false});
+const scene=viewer.scene;
+scene.globe.enableLighting=true; scene.skyAtmosphere.show=true;
+scene.fog.enabled=true; scene.fog.density=0.0002;
+scene.backgroundColor=Cesium.Color.fromCssColorString('#05070f');
 
-const viewer = new Cesium.Viewer('cesiumContainer', {
-  terrain: Cesium.Terrain.fromWorldTerrain(),
-  animation:false, timeline:false, geocoder:false,
-  homeButton:false, navigationHelpButton:false, baseLayerPicker:false,
-});
-viewer.scene.globe.enableLighting = true;
+function heat(t){t=Math.max(0,Math.min(1,t));
+  const s=[[0,[58,106,212]],[.3,[94,234,212]],[.55,[255,213,79]],[.8,[255,138,77]],[1,[255,48,48]]];
+  for(let i=0;i<s.length-1;i++){const[a,ca]=s[i],[b,cb]=s[i+1];
+    if(t>=a&&t<=b){const k=(t-a)/(b-a);
+      return`rgb(${Math.round(ca[0]+(cb[0]-ca[0])*k)},${Math.round(ca[1]+(cb[1]-ca[1])*k)},${Math.round(ca[2]+(cb[2]-ca[2])*k)})`}}
+  return'rgb(255,48,48)'}
 
-let lookup = {};       // "gx_gy" → {color, t_norm, s_norm}
-let gridSize = 0.0004;
-let currentMode = 'cluster';
-let osmBuildings;
+let META,CELLS,lookup={},osmBuildings,currentMonth=6,tempOffset=0;
+let essOn=false, essCapPct=10, essEntity=null, essGlow=null, essTime=0;
+const ESS_LON=126.82265, ESS_LAT=37.56444;
 
-function heatHex(t){
-  const r=Math.round(255*Math.min(1,t*1.6));
-  const g=Math.round(255*Math.min(1, t<0.5?t*2:(1-t)*1.4+0.3));
-  const b=Math.round(255*Math.max(0,1-t*1.8));
-  return `rgb(${r},${g},${b})`;
+function energyOf(cell,month,dT){
+  let base=cell.m[month-1];
+  if(dT===0) return base;
+  const t=META.monthly_temps[month-1]+dT, t0=META.monthly_temps[month-1];
+  const cdd=Math.max(0,t-META.model.base_temp),hdd=Math.max(0,META.model.base_temp-t);
+  const cdd0=Math.max(0,t0-META.model.base_temp),hdd0=Math.max(0,META.model.base_temp-t0);
+  return base+META.model.cdd_coef*(cdd-cdd0)+META.model.hdd_coef*(hdd-hdd0);
 }
 
-const legends = {
-  cluster:[['냉방집중형 (ESS 우선)','#ff5252'],['중간형','#ffb74d'],['분산형','#4dd0e1']],
-  total:[['에너지 적음','#3a6ad4'],['중간','#ffd54f'],['많음','#ff5252']],
-  summer:[['여름집중 낮음','#3a6ad4'],['중간','#ffd54f'],['높음(ESS우선)','#ff5252']],
-};
-function setLegend(mode){
-  document.getElementById('legend').innerHTML = legends[mode].map(
-    ([t,c])=>`<div class="lg"><span class="dot" style="background:${c}"></span>${t}</div>`).join('');
-  document.querySelectorAll('.btn[data-mode]').forEach(b=>
-    b.classList.toggle('active', b.dataset.mode===mode));
+// ESS 효과: 피크가 높은(빨간) 격자일수록 더 많이 깎임. 용량 클수록 ↑.
+// 깎인 양은 비피크 격자로 약간 분산(평준화). 거리 가중(중앙 가까울수록 효과↑).
+function essReduction(e, distFactor){
+  if(!essOn) return e;
+  // 임계값: 평균 이상만 깎음
+  const thr = META.vmin + (META.vmax-META.vmin)*0.45;
+  if(e <= thr) return e;
+  const cut = (e-thr) * (essCapPct/100) * 1.2 * distFactor;
+  return e - cut;
 }
 
-// 핵심: 건물마다 위치→격자→색을 '함수'로 즉시 계산 (조건식 X, 빠름)
-function applyStyle(mode){
-  currentMode = mode;
-  if(!osmBuildings) return;
-  osmBuildings.style = new Cesium.Cesium3DTileStyle();
-  osmBuildings.tileVisible.removeEventListener(colorTiles);
-  osmBuildings.tileVisible.addEventListener(colorTiles);
-  // 이미 로드된 타일도 다시 칠하기
-  viewer.scene.requestRender();
-  setLegend(mode);
+function refresh(){
+  lookup={}; let sum=0,cnt=0,peak=0,peakOrig=0;
+  for(const c of CELLS){
+    let e=energyOf(c,currentMonth,tempOffset);
+    peakOrig=Math.max(peakOrig,e);
+    // 중앙 거리 가중
+    const d=Math.sqrt((c.lon-ESS_LON)**2+(c.lat-ESS_LAT)**2);
+    const distFactor=Math.max(0.3, 1-d/0.02);
+    e=essReduction(e,distFactor);
+    const key=Math.round(c.lon/META.grid_size)+'_'+Math.round(c.lat/META.grid_size);
+    lookup[key]=e; sum+=e; cnt++; peak=Math.max(peak,e);
+  }
+  document.getElementById('statAvg').textContent=(sum/cnt).toFixed(0);
+  document.getElementById('statPeak').textContent=peak.toFixed(0);
+  if(essOn){
+    const save=(peakOrig-peak)/peakOrig*100;
+    document.getElementById('statSave').textContent='-'+save.toFixed(1)+'%';
+  } else {
+    document.getElementById('statSave').textContent='OFF';
+  }
 }
 
 function colorTiles(tile){
-  const content = tile.content;
-  const n = content.featuresLength;
-  for(let i=0;i<n;i++){
-    const f = content.getFeature(i);
-    const lon = f.getProperty('cesium#longitude');
-    const lat = f.getProperty('cesium#latitude');
-    if(lon===undefined || lat===undefined){ continue; }
-    const key = Math.round(lon/gridSize)+'_'+Math.round(lat/gridSize);
-    const cell = lookup[key];
-    if(!cell){ f.color = Cesium.Color.fromCssColorString('#3a3f55'); continue; }
-    let col;
-    if(currentMode==='cluster') col = cell.color;
-    else if(currentMode==='total') col = heatHex(cell.t_norm);
-    else col = heatHex(cell.s_norm);
-    f.color = Cesium.Color.fromCssColorString(col);
+  const c=tile.content,n=c.featuresLength;
+  for(let i=0;i<n;i++){const f=c.getFeature(i);
+    const lon=f.getProperty('cesium#longitude'),lat=f.getProperty('cesium#latitude');
+    if(lon===undefined||lat===undefined)continue;
+    const key=Math.round(lon/META.grid_size)+'_'+Math.round(lat/META.grid_size);
+    const e=lookup[key];
+    if(e===undefined){f.show=false;continue}
+    f.show=true;
+    f.color=Cesium.Color.fromCssColorString(heat((e-META.vmin)/(META.vmax-META.vmin)));
   }
 }
+function apply(){refresh(); if(osmBuildings){
+  osmBuildings.tileVisible.removeEventListener(colorTiles);
+  osmBuildings.tileVisible.addEventListener(colorTiles); scene.requestRender();}}
 
-fetch('grid_colors.json').then(r=>r.json()).then(async data=>{
-  gridSize = data.meta.grid_size;
-  // 빠른 조회용 lookup 테이블 구성
-  for(const c of data.cells){
-    const key = Math.round(c.lon/gridSize)+'_'+Math.round(c.lat/gridSize);
-    lookup[key] = c;
-  }
-  const clon = data.cells.reduce((s,c)=>s+c.lon,0)/data.cells.length;
-  const clat = data.cells.reduce((s,c)=>s+c.lat,0)/data.cells.length;
-
-  osmBuildings = await Cesium.createOsmBuildingsAsync();
-  viewer.scene.primitives.add(osmBuildings);
-
-  document.getElementById('loading').style.display='none';
-  viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(clon, clat-0.012, 1800),
-    orientation:{ heading:0, pitch:Cesium.Math.toRadians(-35), roll:0 },
-    duration:2.5,
+// === ESS 거점 생성/이펙트 ===
+function createESS(){
+  // 중앙 원기둥 + 빛나는 후광
+  essEntity=viewer.entities.add({
+    position:Cesium.Cartesian3.fromDegrees(ESS_LON,ESS_LAT,30),
+    cylinder:{length:60,topRadius:25,bottomRadius:25,
+      material:Cesium.Color.fromCssColorString('#ffd54f').withAlpha(0.85),
+      outline:true,outlineColor:Cesium.Color.WHITE.withAlpha(0.6)},
   });
-  applyStyle('cluster');
-}).catch(err=>{
-  document.getElementById('loading').innerHTML =
-    'grid_colors.json을 못 찾았어요.<br>로컬 서버(python -m http.server)로 여세요.<br>'+err;
+  essGlow=viewer.entities.add({
+    position:Cesium.Cartesian3.fromDegrees(ESS_LON,ESS_LAT,5),
+    ellipse:{semiMinorAxis:200,semiMajorAxis:200,height:5,
+      material:Cesium.Color.fromCssColorString('#ffd54f').withAlpha(0.25)},
+  });
+}
+function removeESS(){
+  if(essEntity){viewer.entities.remove(essEntity);essEntity=null}
+  if(essGlow){viewer.entities.remove(essGlow);essGlow=null}
+}
+
+// 충방전 애니메이션 (시간 연동: 낮=방전 노랑확장, 밤=충전 파랑수축)
+viewer.clock.onTick.addEventListener(()=>{
+  if(!essOn||!essGlow)return;
+  essTime+=0.03;
+  // 현재 월의 "하루 중 시간"을 흉내: 재생 아니어도 맥동
+  const phase=Math.sin(essTime);
+  const charging = phase<0; // 음수=충전
+  const r=200+Math.abs(phase)*180;
+  essGlow.ellipse.semiMinorAxis=r;
+  essGlow.ellipse.semiMajorAxis=r;
+  const col=charging?'#5e8bff':'#ffd54f'; // 충전 파랑/방전 노랑
+  essGlow.ellipse.material=Cesium.Color.fromCssColorString(col).withAlpha(0.15+Math.abs(phase)*0.2);
+  essEntity.cylinder.material=Cesium.Color.fromCssColorString(col).withAlpha(0.85);
+  document.getElementById('essStatus').textContent = charging?'🔵 충전 중 (저전력 시간)':'🟡 방전 중 (피크 대응)';
+  scene.requestRender();
 });
 
-let rotating=false;
-viewer.clock.onTick.addEventListener(()=>{ if(rotating) viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z,-0.0015); });
-document.getElementById('rotateBtn').addEventListener('click',()=>{ rotating=!rotating; });
-document.querySelectorAll('.btn[data-mode]').forEach(b=>
-  b.addEventListener('click',()=>applyStyle(b.dataset.mode)));
-</script>
+// === 컨트롤 ===
+const monthSlider=document.getElementById('monthSlider');
+monthSlider.addEventListener('input',e=>{currentMonth=+e.target.value;updateLabel();apply()});
+document.getElementById('tempOffset').addEventListener('input',e=>{
+  tempOffset=+e.target.value;
+  document.getElementById('tempOffsetLabel').textContent=(tempOffset>=0?'+':'')+tempOffset.toFixed(1)+'°C';
+  updateLabel();apply()});
+document.getElementById('capSlider').addEventListener('input',e=>{
+  essCapPct=+e.target.value;
+  document.getElementById('capLabel').textContent='일에너지 '+essCapPct+'%';
+  if(essOn)apply()});
+function updateLabel(){
+  document.getElementById('monthLabel').textContent=currentMonth+'월';
+  if(META)document.getElementById('monthTemp').textContent=(META.monthly_temps[currentMonth-1]+tempOffset).toFixed(1)+'°C';
+}
+const essBtn=document.getElementById('essBtn');
+essBtn.addEventListener('click',()=>{
+  essOn=!essOn;
+  if(essOn){essBtn.textContent='🔋 ESS 가동 중 (끄기)';essBtn.className='essBtn essOn';createESS();}
+  else{essBtn.textContent='⚡ ESS 설치하기';essBtn.className='essBtn essOff';removeESS();
+    document.getElementById('essStatus').textContent='';}
+  apply();
+});
+
+let playing=false,timer=null;
+document.getElementById('playBtn').addEventListener('click',()=>{
+  if(playing){clearInterval(timer);playing=false;document.getElementById('playBtn').innerHTML='▶ 1년 재생';return}
+  playing=true;document.getElementById('playBtn').innerHTML='⏸ 일시정지';
+  timer=setInterval(()=>{currentMonth=currentMonth%12+1;monthSlider.value=currentMonth;updateLabel();apply()},800);
+});
+
+fetch('grid_dynamic.json').then(r=>r.json()).then(async data=>{
+  META=data.meta;CELLS=data.cells;
+  const clon=CELLS.reduce((s,c)=>s+c.lon,0)/CELLS.length;
+  const clat=CELLS.reduce((s,c)=>s+c.lat,0)/CELLS.length;
+  osmBuildings=await Cesium.createOsmBuildingsAsync();
+  scene.primitives.add(osmBuildings);
+  document.getElementById('loading').style.display='none';
+  viewer.camera.setView({destination:Cesium.Cartesian3.fromDegrees(clon,clat-0.06,6000),
+    orientation:{heading:0,pitch:Cesium.Math.toRadians(-30),roll:0}});
+  viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(clon,clat-0.014,1400),
+    orientation:{heading:Cesium.Math.toRadians(15),pitch:Cesium.Math.toRadians(-32),roll:0},duration:4.5});
+  updateLabel();apply();
+}).catch(err=>{document.getElementById('loading').innerHTML='grid_dynamic.json을 못 찾았어요.<br>'+err});
 </script>
 </body>
 </html>
