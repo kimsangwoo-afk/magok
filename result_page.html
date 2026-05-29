@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>마곡동 디지털트윈 — 분석 결과</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Gowun+Batang&family=JetBrains+Mono:wght@400;600&display=swap');
+  :root{
+    --bg:#faf7f2;--bg2:#f3eee5;--card:#ffffff;--line:#e3dccf;--line2:#d6cdb8;
+    --ink:#1a1f2e;--ink2:#3d4759;--dim:#6b7385;
+    --teal:#0e7c6c;--teal2:#4ba89a;--teal-soft:#e8f5f2;
+    --amber:#b07a1a;--amber2:#d99e3a;--amber-soft:#fbf3df;
+    --red:#a8423a;--red-soft:#fae8e6;
+    --blue:#3a6ad4;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:'Gowun Batang','Noto Sans KR',serif;
+    line-height:1.8;font-size:16.5px;overflow-x:hidden}
+  body::before{content:'';position:fixed;inset:0;z-index:-1;
+    background:radial-gradient(ellipse 70% 50% at 80% 0%, rgba(14,124,108,.06), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 0% 50%, rgba(176,122,26,.05), transparent 60%)}
+  .mono{font-family:'JetBrains Mono',monospace}
+
+  /* HERO */
+  .hero{max-width:1100px;margin:0 auto;padding:80px 28px 50px;text-align:center}
+  .back{display:inline-block;color:var(--teal);text-decoration:none;font-family:'JetBrains Mono';
+    font-size:13px;margin-bottom:20px;letter-spacing:1.5px}
+  .back:hover{text-decoration:underline}
+  .hero .tag{font-family:'JetBrains Mono';color:var(--amber);font-size:13px;
+    letter-spacing:3px;margin-bottom:18px;text-transform:uppercase}
+  .hero h1{font-family:'Noto Sans KR';font-weight:700;font-size:clamp(32px,5vw,48px);
+    line-height:1.25;letter-spacing:-0.5px;color:var(--ink)}
+  .hero h1 em{font-style:normal;color:var(--teal)}
+  .hero .lead{font-size:17px;color:var(--ink2);max-width:680px;margin:24px auto 0;line-height:1.85}
+
+  section{max-width:1100px;margin:0 auto;padding:60px 28px}
+  .label{font-family:'JetBrains Mono';color:var(--teal);font-size:12.5px;letter-spacing:2.5px;
+    margin-bottom:14px;display:flex;align-items:center;gap:12px;text-transform:uppercase}
+  .label::before{content:'';width:28px;height:1.5px;background:var(--teal)}
+  h2{font-family:'Noto Sans KR';font-weight:700;font-size:clamp(24px,3.5vw,32px);
+    line-height:1.3;color:var(--ink);margin-bottom:18px;letter-spacing:-0.3px}
+  h2 em{font-style:normal;color:var(--teal)}
+  h3.sub{font-family:'Noto Sans KR';font-weight:600;font-size:18px;margin:30px 0 12px;
+    color:var(--ink);padding-bottom:6px;border-bottom:1px solid var(--line)}
+  p.body{font-size:15.5px;color:var(--ink2);margin-bottom:12px;line-height:1.8}
+  p.body b{color:var(--ink);font-weight:700}
+
+  /* 종합 인포그래픽 (HERO 직후) */
+  .hero-stats{max-width:1100px;margin:0 auto;padding:0 28px 30px;
+    display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+  @media(max-width:900px){.hero-stats{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:520px){.hero-stats{grid-template-columns:repeat(2,1fr)}}
+  .hstat{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:20px 12px;text-align:center;transition:.25s}
+  .hstat:hover{border-color:var(--teal);transform:translateY(-2px)}
+  .hstat .num{font-family:'Noto Sans KR';font-weight:700;font-size:clamp(20px,3vw,26px);
+    color:var(--teal);line-height:1.15}
+  .hstat .num.warn{color:var(--amber)}
+  .hstat .num.bad{color:var(--red)}
+  .hstat .lbl{font-size:11.5px;color:var(--dim);margin-top:6px;font-family:'Noto Sans KR'}
+
+  /* 차트 컨테이너 */
+  .chart-wrap{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:24px 26px;margin:18px 0}
+  .chart-wrap h3{font-family:'Noto Sans KR';font-weight:600;font-size:17px;margin-bottom:6px;color:var(--ink)}
+  .chart-wrap .note{font-size:13px;color:var(--dim);margin-bottom:16px}
+  .chart-box{position:relative;height:360px}
+  @media(max-width:600px){.chart-box{height:300px}}
+
+  /* 표 */
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px;
+    background:var(--card);border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+  th{background:var(--bg2);color:var(--ink);text-align:left;padding:12px 14px;
+    font-family:'JetBrains Mono';font-size:12px;letter-spacing:.5px;font-weight:600;
+    border-bottom:1px solid var(--line)}
+  td{padding:11px 14px;border-top:1px solid var(--line);color:var(--ink2);font-family:'Gowun Batang'}
+  td.mono{font-family:'JetBrains Mono';font-size:13.5px}
+  td.win{color:var(--teal);font-weight:700}
+  td.warn{color:var(--amber);font-weight:700}
+  td.bad{color:var(--red);font-weight:700}
+  td.b{font-weight:700;color:var(--ink)}
+
+  /* 카드 그리드 */
+  .grid{display:grid;gap:16px;margin:20px 0}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:800px){.g2,.g3{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px;
+    transition:.25s}
+  .card:hover{border-color:var(--teal);transform:translateY(-2px);box-shadow:0 6px 20px rgba(14,124,108,.08)}
+  .card .ic{font-size:24px;margin-bottom:10px}
+  .card h3{font-family:'Noto Sans KR';font-weight:600;font-size:16px;margin-bottom:10px;color:var(--ink)}
+  .card p{font-size:14.5px;color:var(--ink2);line-height:1.7}
+  .card .big{font-family:'Noto Sans KR';font-weight:700;font-size:28px;color:var(--teal);line-height:1.1;margin-bottom:6px}
+
+  /* 강조 박스 */
+  .highlight{background:var(--teal-soft);border:1px solid #c4dfd9;border-radius:10px;
+    padding:18px 22px;margin:14px 0}
+  .highlight p{font-size:15px;color:var(--ink);margin:4px 0}
+  .highlight b{color:var(--teal);font-weight:700}
+
+  .quote{font-family:'Noto Sans KR';font-weight:500;font-size:clamp(17px,2vw,19px);
+    line-height:1.6;padding:22px 26px;border-left:4px solid var(--amber);margin:24px 0;
+    background:var(--amber-soft);color:var(--ink);border-radius:0 10px 10px 0}
+  .quote .src{font-family:'Gowun Batang';font-size:13.5px;color:var(--dim);margin-top:8px;font-weight:400}
+
+  /* CTA */
+  .cta-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:30px}
+  .cta-row a{display:inline-block;padding:14px 28px;border-radius:10px;text-decoration:none;
+    font-family:'Noto Sans KR';font-weight:600;font-size:15px;transition:.25s}
+  .cta-row a.primary{background:var(--teal);color:#fff;box-shadow:0 6px 20px rgba(14,124,108,.25)}
+  .cta-row a.primary:hover{background:#0a665a;transform:translateY(-2px)}
+  .cta-row a.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+  .cta-row a.ghost:hover{border-color:var(--teal);color:var(--teal)}
+
+  footer{text-align:center;padding:50px 28px;color:var(--dim);font-size:13px;
+    border-top:1px solid var(--line);background:var(--bg2);margin-top:60px}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <a href="project_site.html" class="back">← 프로젝트 설명으로</a>
+  <div class="tag">Results · 분석 결과</div>
+  <h1>디지털트윈이 <em>알려준 것</em></h1>
+  <p class="lead">3D 디지털트윈 데모로 확인한 마곡동의 에너지 구조를, 정량적 표·그래프로 다시 정리합니다.
+    핵심 수치, 기온 시나리오 예측, ESS 효과를 한눈에.</p>
+</div>
+
+<!-- E. 종합 인포그래픽 (핵심 수치 한 줄) -->
+<div class="hero-stats">
+  <div class="hstat"><div class="num">11,358</div><div class="lbl">마곡 건물</div></div>
+  <div class="hstat"><div class="num">0.70</div><div class="lbl">기온–에너지 상관 r</div></div>
+  <div class="hstat"><div class="num warn">0.07</div><div class="lbl">면적–에너지 상관 r</div></div>
+  <div class="hstat"><div class="num">0.691</div><div class="lbl">XGBoost R² (건물단위)</div></div>
+  <div class="hstat"><div class="num">21%</div><div class="lbl">ESS 피크 저감 (용량 10%)</div></div>
+  <div class="hstat"><div class="num bad">+11.4%</div><div class="lbl">기온 +5°C 시 피크 증가</div></div>
+</div>
+
+<!-- B. 마곡 에너지 진단 -->
+<section id="r1">
+  <div class="label">01 · Magok Energy Profile</div>
+  <h2>마곡동의 <em>월별 에너지 패턴</em></h2>
+  <p class="body">군집별 12개월 평균 에너지를 보면, 마곡 건물은 모두 <b>여름 단봉형(6월 피크)</b>으로 같은 모양을 공유.
+    차이는 <b>여름 집중 강도</b>뿐입니다.</p>
+
+  <div class="chart-wrap">
+    <h3>군집별 월별 평균 에너지</h3>
+    <div class="note">정규화 비율(연합=1) × 평균 연총량으로 환산. 6월에 일제히 피크.</div>
+    <div class="chart-box"><canvas id="chart_monthly"></canvas></div>
+  </div>
+
+  <h3 class="sub">군집별 통계 요약</h3>
+  <table>
+    <tr><th>군집</th><th>건물수</th><th>여름비중 (6~8월)</th><th>평균 연총량</th><th>ESS 우선순위</th></tr>
+    <tr><td class="b win">냉방집중형</td><td class="mono">1,131</td><td class="mono">0.54</td><td class="mono">507</td><td class="win">★★★ 최우선</td></tr>
+    <tr><td class="b">중간형</td><td class="mono">3,036</td><td class="mono">0.47</td><td class="mono">838</td><td class="warn">★★</td></tr>
+    <tr><td class="b">분산형</td><td class="mono">7,191</td><td class="mono">0.41</td><td class="mono">1,079</td><td>★</td></tr>
+  </table>
+  <div class="highlight">
+    <p><b>핵심 발견:</b> 여름 집중도와 연총량이 <b>반비례</b>. 작은 건물일수록 여름에 반짝 몰리는 구조.</p>
+    <p>"작은 건물에 적용하는 ESS가 사실 효과가 가장 크다"는 정책 시사점.</p>
+  </div>
+</section>
+
+<!-- A. ESS 효과 시각화 -->
+<section id="r2">
+  <div class="label">02 · ESS Impact</div>
+  <h2><em>ESS</em>로 피크는 얼마나 줄어드는가</h2>
+  <p class="body">마곡 중앙 공용 ESS 1대 시나리오. 배터리 용량을 일에너지 대비 1~30%로 변화시키며
+    마곡 전체 피크 저감률을 시뮬레이션.</p>
+
+  <div class="chart-wrap">
+    <h3>배터리 용량별 피크 저감률</h3>
+    <div class="note">한계 효용 체감 — 10~20% 구간이 비용/효과의 변곡점.</div>
+    <div class="chart-box"><canvas id="chart_ess_curve"></canvas></div>
+  </div>
+
+  <h3 class="sub">용량별 정량 결과</h3>
+  <table>
+    <tr><th>배터리 용량</th><th>피크 저감률</th><th>증분 (이전 대비)</th><th>해석</th></tr>
+    <tr><td class="b">1%</td><td class="mono">4.7%</td><td class="mono dim">기준</td><td class="dim">최소 효과</td></tr>
+    <tr><td class="b">2%</td><td class="mono">6.2%</td><td class="mono">+1.5%p</td><td class="dim">미미</td></tr>
+    <tr><td class="b">5%</td><td class="mono">13.2%</td><td class="mono">+7.0%p</td><td>효율적</td></tr>
+    <tr><td class="b win">10%</td><td class="mono win">21.0%</td><td class="mono">+7.8%p</td><td class="win">권장 (변곡점)</td></tr>
+    <tr><td class="b">20%</td><td class="mono">29.5%</td><td class="mono">+8.5%p</td><td>한계 효용 감소 시작</td></tr>
+    <tr><td class="b">30%</td><td class="mono">38.5%</td><td class="mono">+9.0%p</td><td class="warn">비용 부담 큼</td></tr>
+  </table>
+
+  <h3 class="sub">기준 비교: 용도 vs 군집 (배터리 10%)</h3>
+  <div class="chart-wrap">
+    <h3>적용 기준에 따른 ESS 효과 차이</h3>
+    <div class="note">"어떻게 묶어 보느냐"에 따라 ESS 효과 추정이 달라짐.</div>
+    <div class="chart-box"><canvas id="chart_basis"></canvas></div>
+  </div>
+
+  <div class="highlight">
+    <p><b>핵심 결론:</b> 마곡동에 <b>일에너지 10% 규모 공용 ESS</b>를 설치하면 여름 피크의 약 <b>21%</b>를 깎을 수 있음.</p>
+    <p>20% 이상 용량은 한계 효용이 빠르게 줄어 비용 대비 비효율.</p>
+  </div>
+</section>
+
+<!-- D. 기온 시나리오 -->
+<section id="r3">
+  <div class="label">03 · Temperature Scenarios</div>
+  <h2>기온이 오르면, <em>피크는 어떻게 될까</em></h2>
+  <p class="body">기후 시나리오로 가설검증. ML 회귀계수(CDD/HDD)를 적용해 현재 대비 +1, +2, +3, +5°C 시
+    마곡 월별 에너지가 어떻게 변하는지 정량 계산.</p>
+
+  <div class="chart-wrap">
+    <h3>기온 시나리오별 월별 에너지 곡선</h3>
+    <div class="note">기온이 오를수록 전 월에 걸쳐 에너지 사용 증가. 특히 여름 피크가 가장 크게 영향받음.</div>
+    <div class="chart-box"><canvas id="chart_scenario"></canvas></div>
+  </div>
+
+  <h3 class="sub">시나리오별 6월 피크 변화 및 필요 ESS 용량</h3>
+  <table>
+    <tr><th>기온 시나리오</th><th>6월 피크 에너지</th><th>현재 대비 증가</th><th>21% 저감 유지에 필요한 ESS</th></tr>
+    <tr><td class="b">현재 (0°C)</td><td class="mono">147.1</td><td class="mono dim">기준</td><td class="mono">10.0%</td></tr>
+    <tr><td class="b">+1°C</td><td class="mono">150.4</td><td class="mono warn">+2.3%</td><td class="mono">10.2%</td></tr>
+    <tr><td class="b">+2°C</td><td class="mono">153.8</td><td class="mono warn">+4.5%</td><td class="mono">10.5%</td></tr>
+    <tr><td class="b">+3°C</td><td class="mono">157.1</td><td class="mono warn">+6.8%</td><td class="mono">10.7%</td></tr>
+    <tr><td class="b">+5°C</td><td class="mono">163.8</td><td class="mono bad">+11.4%</td><td class="mono">11.1%</td></tr>
+  </table>
+
+  <div class="chart-wrap">
+    <h3>6월 피크 증가율</h3>
+    <div class="note">온난화 +5°C 시 마곡 6월 피크는 현재보다 11.4% 더 높아짐.</div>
+    <div class="chart-box"><canvas id="chart_peak_inc"></canvas></div>
+  </div>
+
+  <div class="highlight">
+    <p><b>정책적 시사점:</b> IPCC RCP 8.5 시나리오 하 2050년 한국 기온 +3°C 전망 시
+      마곡 여름 피크가 <b>6.8% 증가</b>. 같은 21% 저감을 유지하려면 ESS 용량을 <b>10% → 10.7%</b>로 증설 필요.</p>
+    <p>한편 +5°C 극단 시나리오에선 피크가 11.4% 증가 — 디지털트윈의 기온 슬라이더로 실시간 확인 가능.</p>
+  </div>
+</section>
+
+<!-- 종합 결론 -->
+<section id="r4">
+  <div class="label">04 · Conclusion</div>
+  <h2>한 페이지로 정리하는 <em>결론</em></h2>
+
+  <div class="grid g3">
+    <div class="card">
+      <div class="ic">🌡️</div><div class="big">기온 = 계절</div>
+      <h3>에너지 결정 요인</h3>
+      <p>마곡 에너지는 기온(계절)이 거의 모두 설명(R²=0.69).
+        건물 특성(면적·층수)은 무관(r≈0.07).</p>
+    </div>
+    <div class="card">
+      <div class="ic">☀️</div><div class="big">6월 피크</div>
+      <h3>여름 단봉형</h3>
+      <p>모든 건물이 동일한 여름 피크 구조. 차이는 강도뿐.
+        전기 위주(난방=가스 누락) 추정.</p>
+    </div>
+    <div class="card">
+      <div class="ic">🔋</div><div class="big">21% ↓</div>
+      <h3>ESS 효과</h3>
+      <p>일에너지 10% 공용 ESS로 마곡 피크 21% 저감.
+        냉방집중형 1,131동이 우선 대상.</p>
+    </div>
+    <div class="card">
+      <div class="ic">📈</div><div class="big">+6.8%</div>
+      <h3>온난화 영향</h3>
+      <p>+3°C 시 6월 피크 6.8% 증가. ESS 용량 약 7% 증설 필요(10→10.7%).</p>
+    </div>
+    <div class="card">
+      <div class="ic">🗺️</div><div class="big">3D Twin</div>
+      <h3>인터랙티브 검증</h3>
+      <p>실제 마곡동 지도 위에서 월·기온·ESS를 슬라이더로 조절하며
+        모든 결과를 실시간 검증.</p>
+    </div>
+    <div class="card">
+      <div class="ic">⚖️</div><div class="big">정직성</div>
+      <h3>한계 명시</h3>
+      <p>월별 데이터만 가진 한계, 시간별 프로파일 가정, OSM 매칭 근사 등
+        모든 약점을 가리지 않고 공개.</p>
+    </div>
+  </div>
+
+  <div class="quote">마곡동은 냉방 의존형 에너지 구조라 여름 피크가 뚜렷하며,
+    중앙 공용 ESS(일에너지 10%)로 피크의 약 21%를 완화할 수 있다.
+    기온이 +3°C 오르면 같은 효과 유지에 약 7% 더 큰 ESS가 필요하다.
+    이 모든 분석은 3D 디지털트윈 위에서 인터랙티브하게 검증된다.
+    <div class="src">— 본 연구의 핵심 결론</div></div>
+
+  <div class="cta-row">
+    <a href="magok_cesium_osm.html" class="primary">🌍 디지털트윈 다시 보기</a>
+    <a href="project_site.html" class="ghost">📖 프로젝트 설명</a>
+  </div>
+</section>
+
+<footer>
+  마곡동 전력 디지털트윈 프로젝트 · 분석 결과 페이지<br>
+  <span class="mono">Results · ML × ESS × 3D Digital Twin</span>
+</footer>
+
+<script>
+// 공통 색상
+const C = {teal:'#0e7c6c', teal2:'#4ba89a', amber:'#b07a1a', amber2:'#d99e3a',
+           red:'#a8423a', blue:'#3a6ad4', ink:'#1a1f2e', dim:'#6b7385'};
+
+Chart.defaults.font.family = "'Noto Sans KR', sans-serif";
+Chart.defaults.color = C.ink;
+Chart.defaults.borderColor = '#e3dccf';
+
+// 1. 군집별 월별 에너지 (정규화×연총량)
+const monthLabels = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+// 군집별 정규화 패턴 (cluster_buildings.py 결과)
+const cool   = [0.012,0.019,0.044,0.092,0.175,0.219,0.195,0.130,0.054,0.026,0.020,0.013]; // 냉방집중형
+const mid    = [0.013,0.027,0.066,0.111,0.155,0.170,0.160,0.136,0.077,0.038,0.029,0.017]; // 중간형
+const spread = [0.022,0.039,0.078,0.109,0.138,0.145,0.139,0.128,0.084,0.052,0.041,0.025]; // 분산형
+// 연총량 곱
+const coolE   = cool.map(v=>v*507);
+const midE    = mid.map(v=>v*838);
+const spreadE = spread.map(v=>v*1079);
+
+new Chart(document.getElementById('chart_monthly'),{type:'line',
+  data:{labels:monthLabels, datasets:[
+    {label:'냉방집중형 (n=1,131)', data:coolE, borderColor:C.red, backgroundColor:C.red+'22', tension:.35, fill:false, borderWidth:2.5, pointRadius:3},
+    {label:'중간형 (n=3,036)', data:midE, borderColor:C.amber, backgroundColor:C.amber+'22', tension:.35, fill:false, borderWidth:2.5, pointRadius:3},
+    {label:'분산형 (n=7,191)', data:spreadE, borderColor:C.teal, backgroundColor:C.teal+'22', tension:.35, fill:false, borderWidth:2.5, pointRadius:3},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom'}},
+    scales:{y:{title:{display:true,text:'평균 에너지'},beginAtZero:true},
+            x:{title:{display:true,text:'월'}}}}
+});
+
+// 2. ESS 곡선
+new Chart(document.getElementById('chart_ess_curve'),{type:'line',
+  data:{labels:['1%','2%','5%','10%','20%','30%'],
+    datasets:[{label:'피크 저감률 (%)',data:[4.7,6.2,13.2,21.0,29.5,38.5],
+      borderColor:C.teal, backgroundColor:C.teal+'33', tension:.25, fill:true, borderWidth:3,
+      pointRadius:6, pointBackgroundColor:C.teal, pointBorderColor:'#fff', pointBorderWidth:2}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{y:{title:{display:true,text:'피크 저감률 (%)'},beginAtZero:true,max:45},
+            x:{title:{display:true,text:'배터리 용량 (일에너지 대비)'}}}}
+});
+
+// 3. 용도 vs 군집 비교
+new Chart(document.getElementById('chart_basis'),{type:'bar',
+  data:{labels:['용도 기준 (분류가능 40%)','군집 기준 (전 건물 100%)'],
+    datasets:[{label:'피크 저감률 (%)',data:[15.6,21.0],
+      backgroundColor:[C.amber,C.teal],borderRadius:8,barThickness:80}]},
+  options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+    plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:(c)=>c.parsed.x+'% 저감'}}},
+    scales:{x:{title:{display:true,text:'피크 저감률 (%)'},beginAtZero:true,max:30}}}
+});
+
+// 4. 기온 시나리오별 월별 에너지
+const scenarioData = {
+  '현재 (0°C)':  [18.2,33.5,70.7,104.7,138.1,147.1,140.5,125.0,77.6,45.5,35.3,21.4],
+  '+1°C':       [22.7,37.9,75.2,109.2,141.5,150.4,143.9,128.4,80.9,50.0,39.8,25.9],
+  '+2°C':       [27.2,42.4,79.6,113.6,144.8,153.8,147.2,131.7,84.2,54.5,44.3,30.4],
+  '+3°C':       [31.7,46.9,84.1,118.1,148.2,157.1,150.6,135.1,87.6,58.3,48.8,34.8],
+  '+5°C':       [40.6,55.8,93.0,126.2,154.9,163.8,157.2,141.7,94.3,65.0,57.7,43.8],
+};
+const sColors = [C.ink, C.teal2, C.teal, C.amber, C.red];
+new Chart(document.getElementById('chart_scenario'),{type:'line',
+  data:{labels:monthLabels,
+    datasets:Object.keys(scenarioData).map((k,i)=>({
+      label:k, data:scenarioData[k],
+      borderColor:sColors[i], backgroundColor:sColors[i]+'15', tension:.3, fill:false,
+      borderWidth: i===0?3:2, borderDash: i===0?[]:(i>=3?[6,3]:[]),
+      pointRadius:3
+    }))},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom'}},
+    scales:{y:{title:{display:true,text:'평균 에너지'},beginAtZero:true},
+            x:{title:{display:true,text:'월'}}}}
+});
+
+// 5. 6월 피크 증가율
+new Chart(document.getElementById('chart_peak_inc'),{type:'bar',
+  data:{labels:['현재','+1°C','+2°C','+3°C','+5°C'],
+    datasets:[{label:'6월 피크 증가율 (%)', data:[0, 2.3, 4.5, 6.8, 11.4],
+      backgroundColor:[C.dim, C.teal2, C.teal, C.amber, C.red],
+      borderRadius:6, barThickness:50}]},
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:(c)=>'+ '+c.parsed.y+'%'}}},
+    scales:{y:{title:{display:true,text:'현재 대비 증가율 (%)'},beginAtZero:true},
+            x:{title:{display:true,text:'기온 시나리오'}}}}
+});
+</script>
+</body>
+</html>
