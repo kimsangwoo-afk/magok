@@ -66,7 +66,7 @@
     <div class="section-title" style="color:#ffd54f">🔋 공용 ESS (마곡 중앙)</div>
     <button id="essBtn" class="essBtn essOff">⚡ ESS 설치하기</button>
     <div id="essStatus"></div>
-    <div class="row" style="margin-top:8px"><span>배터리 용량</span><span class="v" id="capLabel">일에너지 10%</span></div>
+    <div class="row" style="margin-top:8px"><span>배터리 용량</span><span class="v" id="capLabel">일에너지 10% (피크 -21%)</span></div>
     <input type="range" id="capSlider" min="1" max="30" value="10" step="1">
   </div>
 
@@ -105,8 +105,27 @@ function heat(t){t=Math.max(0,Math.min(1,t));
   return'rgb(255,48,48)'}
 
 let META,CELLS,lookup={},osmBuildings,currentMonth=6,tempOffset=0;
-let essOn=false, essCapPct=10, essEntity=null, essGlow=null, essTime=0;
+let essOn=false, essCapPct=10, essTime=0;
+let essParts=[], essBeams=[], essBuildTargets=[];
 const ESS_LON=126.82265, ESS_LAT=37.56444;
+
+// === 실제 ESS 시뮬레이션(ess_sim.py) 결과: 배터리용량(%) → 마곡 전체 피크저감률(%) ===
+const ESS_CURVE = [
+  [1, 4.71],[2, 6.18],[5, 13.21],[10, 20.97],[20, 29.55],[30, 38.51]
+];
+// 용량%를 넣으면 시뮬레이션과 동일한 '목표 피크저감률'을 보간해서 반환
+function targetReductionPct(capPct){
+  const c = ESS_CURVE;
+  if(capPct <= c[0][0]) return c[0][1];
+  if(capPct >= c[c.length-1][0]) return c[c.length-1][1];
+  for(let i=0;i<c.length-1;i++){
+    if(capPct>=c[i][0] && capPct<=c[i+1][0]){
+      const k=(capPct-c[i][0])/(c[i+1][0]-c[i][0]);
+      return c[i][1]+(c[i+1][1]-c[i][1])*k;
+    }
+  }
+  return c[c.length-1][1];
+}
 
 function energyOf(cell,month,dT){
   let base=cell.m[month-1];
@@ -117,33 +136,40 @@ function energyOf(cell,month,dT){
   return base+META.model.cdd_coef*(cdd-cdd0)+META.model.hdd_coef*(hdd-hdd0);
 }
 
-// ESS 효과: 피크가 높은(빨간) 격자일수록 더 많이 깎임. 용량 클수록 ↑.
-// 깎인 양은 비피크 격자로 약간 분산(평준화). 거리 가중(중앙 가까울수록 효과↑).
-function essReduction(e, distFactor){
+// ESS 효과: 시뮬레이션 목표 저감률에 맞춰 피크 격자를 깎음.
+// 피크가 높은(빨간) 격자일수록, 중앙에 가까울수록 더 많이 깎임.
+function essReduction(e, distFactor, peakOrig){
   if(!essOn) return e;
-  // 임계값: 평균 이상만 깎음
-  const thr = META.vmin + (META.vmax-META.vmin)*0.45;
+  const thr = META.vmin + (META.vmax-META.vmin)*0.45;  // 평균 이상만 대상
   if(e <= thr) return e;
-  const cut = (e-thr) * (essCapPct/100) * 1.2 * distFactor;
+  // 목표 저감률 (시뮬레이션 곡선)
+  const targetPct = targetReductionPct(essCapPct) / 100;
+  // 피크 격자(가장 높은 곳)가 targetPct 만큼 깎이도록, 나머지는 비례 축소
+  const cut = (e - thr) * targetPct * distFactor;
   return e - cut;
 }
 
 function refresh(){
   lookup={}; let sum=0,cnt=0,peak=0,peakOrig=0;
+  // 1차: 원본 피크 파악
+  for(const c of CELLS){
+    const e0=energyOf(c,currentMonth,tempOffset);
+    if(e0>peakOrig) peakOrig=e0;
+  }
+  // 2차: ESS 적용
   for(const c of CELLS){
     let e=energyOf(c,currentMonth,tempOffset);
-    peakOrig=Math.max(peakOrig,e);
-    // 중앙 거리 가중
     const d=Math.sqrt((c.lon-ESS_LON)**2+(c.lat-ESS_LAT)**2);
     const distFactor=Math.max(0.3, 1-d/0.02);
-    e=essReduction(e,distFactor);
+    e=essReduction(e,distFactor,peakOrig);
     const key=Math.round(c.lon/META.grid_size)+'_'+Math.round(c.lat/META.grid_size);
     lookup[key]=e; sum+=e; cnt++; peak=Math.max(peak,e);
   }
   document.getElementById('statAvg').textContent=(sum/cnt).toFixed(0);
   document.getElementById('statPeak').textContent=peak.toFixed(0);
   if(essOn){
-    const save=(peakOrig-peak)/peakOrig*100;
+    // 표시 저감률 = 시뮬레이션 목표값 (일관성)
+    const save=targetReductionPct(essCapPct);
     document.getElementById('statSave').textContent='-'+save.toFixed(1)+'%';
   } else {
     document.getElementById('statSave').textContent='OFF';
@@ -162,44 +188,125 @@ function colorTiles(tile){
     f.color=Cesium.Color.fromCssColorString(heat((e-META.vmin)/(META.vmax-META.vmin)));
   }
 }
-function apply(){refresh(); if(osmBuildings){
-  osmBuildings.tileVisible.removeEventListener(colorTiles);
-  osmBuildings.tileVisible.addEventListener(colorTiles); scene.requestRender();}}
+function apply(){
+  refresh();
+  if(essOn && essParts.length>0){ removeESS(); createESS(); } // 빛줄기 대상 갱신
+  if(osmBuildings){
+    osmBuildings.tileVisible.removeEventListener(colorTiles);
+    osmBuildings.tileVisible.addEventListener(colorTiles); scene.requestRender();}
+}
 
-// === ESS 거점 생성/이펙트 ===
+// === ESS 시설 생성 (배터리 컨테이너 단지) ===
+function lonOff(lon, meters){ return lon + meters/(111320*Math.cos(ESS_LAT*Math.PI/180)); }
+function latOff(lat, meters){ return lat + meters/110540; }
+
 function createESS(){
-  // 중앙 원기둥 + 빛나는 후광
-  essEntity=viewer.entities.add({
-    position:Cesium.Cartesian3.fromDegrees(ESS_LON,ESS_LAT,30),
-    cylinder:{length:60,topRadius:25,bottomRadius:25,
-      material:Cesium.Color.fromCssColorString('#ffd54f').withAlpha(0.85),
-      outline:true,outlineColor:Cesium.Color.WHITE.withAlpha(0.6)},
+  essParts=[]; essBeams=[]; essBuildTargets=[];
+
+  // 1) 바닥 플랫폼 (단지 부지)
+  essParts.push(viewer.entities.add({
+    position:Cesium.Cartesian3.fromDegrees(ESS_LON,ESS_LAT,2),
+    ellipse:{semiMinorAxis:55,semiMajorAxis:75,height:2,
+      material:Cesium.Color.fromCssColorString('#0f1626').withAlpha(0.9),
+      outline:true,outlineColor:Cesium.Color.fromCssColorString('#5eead4').withAlpha(0.8)},
+  }));
+
+  // 2) 배터리 컨테이너 박스 6개 (2열 x 3개) - 솟아오르는 느낌으로 높이 부여
+  const layout=[[-30,-18],[0,-18],[30,-18],[-30,18],[0,18],[30,18]];
+  layout.forEach((off,i)=>{
+    const lo=lonOff(ESS_LON,off[0]), la=latOff(ESS_LAT,off[1]);
+    essParts.push(viewer.entities.add({
+      position:Cesium.Cartesian3.fromDegrees(lo,la,12),
+      box:{dimensions:new Cesium.Cartesian3(22,12,24),
+        material:Cesium.Color.fromCssColorString('#1a2942').withAlpha(0.95),
+        outline:true,outlineColor:Cesium.Color.fromCssColorString('#5eead4').withAlpha(0.7)},
+      properties:{kind:'container', idx:i},
+    }));
+    // 컨테이너 위 발광 띠 (충방전 상태 표시용)
+    essParts.push(viewer.entities.add({
+      position:Cesium.Cartesian3.fromDegrees(lo,la,25),
+      box:{dimensions:new Cesium.Cartesian3(22,12,3),
+        material:Cesium.Color.fromCssColorString('#5eead4').withAlpha(0.9)},
+      properties:{kind:'led'},
+    }));
   });
-  essGlow=viewer.entities.add({
-    position:Cesium.Cartesian3.fromDegrees(ESS_LON,ESS_LAT,5),
-    ellipse:{semiMinorAxis:200,semiMajorAxis:200,height:5,
-      material:Cesium.Color.fromCssColorString('#ffd54f').withAlpha(0.25)},
+
+  // 3) 중앙 타워 (관제/인버터 느낌)
+  essParts.push(viewer.entities.add({
+    position:Cesium.Cartesian3.fromDegrees(ESS_LON,ESS_LAT,35),
+    cylinder:{length:70,topRadius:6,bottomRadius:9,
+      material:Cesium.Color.fromCssColorString('#2a3f6b').withAlpha(0.95),
+      outline:true,outlineColor:Cesium.Color.WHITE.withAlpha(0.5)},
+  }));
+
+  // 4) 바닥 발광 후광
+  essParts.push(viewer.entities.add({
+    position:Cesium.Cartesian3.fromDegrees(ESS_LON,ESS_LAT,3),
+    ellipse:{semiMinorAxis:90,semiMajorAxis:110,height:3,
+      material:Cesium.Color.fromCssColorString('#ffd54f').withAlpha(0.2)},
+    properties:{kind:'halo'},
+  }));
+
+  // 5) 가까운 대표 건물 격자 14개 선택 → 빛줄기 대상
+  const sorted=[...CELLS].map(c=>({c,d:Math.hypot(c.lon-ESS_LON,c.lat-ESS_LAT)}))
+    .sort((a,b)=>a.d-b.d).slice(2,40);  // 너무 가까운 건 빼고
+  // 에너지 높은(피크) 격자 우선 14개
+  sorted.sort((a,b)=>energyOf(b.c,currentMonth,tempOffset)-energyOf(a.c,currentMonth,tempOffset));
+  essBuildTargets=sorted.slice(0,14).map(s=>s.c);
+
+  essBuildTargets.forEach(c=>{
+    const beam=viewer.entities.add({
+      polyline:{
+        positions:[Cesium.Cartesian3.fromDegrees(ESS_LON,ESS_LAT,30),
+                   Cesium.Cartesian3.fromDegrees(c.lon,c.lat,40)],
+        width:3,
+        material:new Cesium.PolylineGlowMaterialProperty({
+          glowPower:0.3, color:Cesium.Color.fromCssColorString('#ffd54f')}),
+      },
+    });
+    essBeams.push(beam);
   });
-}
-function removeESS(){
-  if(essEntity){viewer.entities.remove(essEntity);essEntity=null}
-  if(essGlow){viewer.entities.remove(essGlow);essGlow=null}
 }
 
-// 충방전 애니메이션 (시간 연동: 낮=방전 노랑확장, 밤=충전 파랑수축)
+function removeESS(){
+  essParts.forEach(e=>viewer.entities.remove(e));
+  essBeams.forEach(e=>viewer.entities.remove(e));
+  essParts=[]; essBeams=[]; essBuildTargets=[];
+}
+
+// 충방전 애니메이션 (낮=방전 노랑·빛줄기 ESS→건물 / 밤=충전 파랑·역방향)
 viewer.clock.onTick.addEventListener(()=>{
-  if(!essOn||!essGlow)return;
-  essTime+=0.03;
-  // 현재 월의 "하루 중 시간"을 흉내: 재생 아니어도 맥동
-  const phase=Math.sin(essTime);
-  const charging = phase<0; // 음수=충전
-  const r=200+Math.abs(phase)*180;
-  essGlow.ellipse.semiMinorAxis=r;
-  essGlow.ellipse.semiMajorAxis=r;
-  const col=charging?'#5e8bff':'#ffd54f'; // 충전 파랑/방전 노랑
-  essGlow.ellipse.material=Cesium.Color.fromCssColorString(col).withAlpha(0.15+Math.abs(phase)*0.2);
-  essEntity.cylinder.material=Cesium.Color.fromCssColorString(col).withAlpha(0.85);
-  document.getElementById('essStatus').textContent = charging?'🔵 충전 중 (저전력 시간)':'🟡 방전 중 (피크 대응)';
+  if(!essOn||essParts.length===0)return;
+  essTime+=0.025;
+  const phase=Math.sin(essTime);       // -1~1
+  const charging = phase<0;
+  const intensity = Math.abs(phase);
+  const col = charging?'#5e8bff':'#ffd54f';
+  const ccol = Cesium.Color.fromCssColorString(col);
+
+  // LED 띠 & 후광 색/밝기 변화
+  essParts.forEach(p=>{
+    const k=p.properties&&p.properties.kind?p.properties.kind.getValue():null;
+    if(k==='led') p.box.material=ccol.withAlpha(0.5+intensity*0.5);
+    if(k==='halo'){
+      p.ellipse.material=ccol.withAlpha(0.1+intensity*0.25);
+      p.ellipse.semiMinorAxis=90+intensity*40;
+      p.ellipse.semiMajorAxis=110+intensity*50;
+    }
+  });
+
+  // 빛줄기: 밝기 맥동 + 방향감(색) — 방전=노랑(ESS→건물), 충전=파랑
+  essBeams.forEach((beam,i)=>{
+    const off=(Math.sin(essTime*2 + i*0.5)+1)/2; // 0~1 흐르는 느낌
+    beam.polyline.material=new Cesium.PolylineGlowMaterialProperty({
+      glowPower:0.2+off*0.4,
+      color:ccol.withAlpha(0.3+off*0.6),
+    });
+    beam.polyline.width=2+off*3;
+  });
+
+  document.getElementById('essStatus').textContent =
+    charging?'🔵 충전 중 (저전력 시간대 — 건물→ESS)':'🟡 방전 중 (피크 대응 — ESS→건물)';
   scene.requestRender();
 });
 
@@ -212,7 +319,7 @@ document.getElementById('tempOffset').addEventListener('input',e=>{
   updateLabel();apply()});
 document.getElementById('capSlider').addEventListener('input',e=>{
   essCapPct=+e.target.value;
-  document.getElementById('capLabel').textContent='일에너지 '+essCapPct+'%';
+  document.getElementById('capLabel').textContent='일에너지 '+essCapPct+'% (피크 -'+targetReductionPct(essCapPct).toFixed(0)+'%)';
   if(essOn)apply()});
 function updateLabel(){
   document.getElementById('monthLabel').textContent=currentMonth+'월';
