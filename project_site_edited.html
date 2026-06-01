@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>마곡동 전력 디지털트윈 프로젝트</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --accent: #3b82f6;
+    --accent2: #10b981;
+    --accent3: #f59e0b;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --border: #1e3a5f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', 'Noto Sans KR', sans-serif; line-height: 1.7; }
+  a { color: var(--accent); text-decoration: none; }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    background: radial-gradient(ellipse at 60% 40%, #0d2a4a 0%, #0a0e1a 70%);
+    padding: 2rem;
+  }
+  .hero-label { font-size: .8rem; letter-spacing: .15em; color: var(--accent); text-transform: uppercase; margin-bottom: 1rem; }
+  .hero h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; line-height: 1.2; margin-bottom: 1.2rem; }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero p { max-width: 600px; color: var(--text-muted); font-size: 1.05rem; margin-bottom: 2rem; }
+  .tag-row { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; margin-bottom: 2.5rem; }
+  .tag { background: rgba(59,130,246,.15); border: 1px solid var(--border); color: var(--accent); padding: .3rem .9rem; border-radius: 999px; font-size: .82rem; }
+  .stats-row { display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.8rem; text-align: center; }
+  .stat-num { font-size: 1.6rem; font-weight: 700; color: var(--accent2); }
+  .stat-label { font-size: .78rem; color: var(--text-muted); }
+  .scroll-hint { margin-top: 3rem; color: var(--text-muted); font-size: .85rem; animation: bounce 2s infinite; }
+  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px)} }
+
+  /* SECTIONS */
+  section { max-width: 900px; margin: 0 auto; padding: 6rem 1.5rem; border-top: 1px solid var(--border); }
+  .section-label { font-size: .75rem; letter-spacing: .15em; color: var(--accent); text-transform: uppercase; margin-bottom: .5rem; }
+  h2 { font-size: 2rem; font-weight: 700; margin-bottom: 1.5rem; }
+  h3 { font-size: 1.2rem; font-weight: 600; margin-bottom: .8rem; color: var(--accent2); }
+  p { color: var(--text-muted); margin-bottom: 1rem; }
+  ul { padding-left: 1.3rem; color: var(--text-muted); margin-bottom: 1rem; }
+  li { margin-bottom: .4rem; }
+
+  /* FLOW */
+  .flow { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: 2rem 0; }
+  .flow-step { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .5rem 1rem; font-size: .85rem; }
+  .flow-arrow { color: var(--accent); font-weight: 700; }
+
+  /* ESS BOX */
+  .ess-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; display: flex; gap: 2rem; align-items: center; flex-wrap: wrap; }
+  .ess-icon { font-size: 2rem; }
+  .ess-cycle { display: flex; flex-direction: column; gap: .5rem; font-size: .9rem; }
+  .ess-cycle span { color: var(--text-muted); }
+
+  /* DATA TABLE */
+  .data-table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: .9rem; }
+  .data-table th { background: var(--surface2); color: var(--accent); padding: .6rem .9rem; text-align: left; font-weight: 600; }
+  .data-table td { padding: .6rem .9rem; border-bottom: 1px solid var(--border); color: var(--text-muted); }
+  .data-table tr:hover td { background: rgba(59,130,246,.05); }
+
+  /* FINDING CARDS */
+  .findings-grid { display: grid; gap: 1.5rem; }
+  .finding-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 1.8rem; position: relative; overflow: hidden;
+  }
+  .finding-card::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+    background: var(--accent);
+  }
+  .finding-num { font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin-bottom: .4rem; }
+  .finding-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; color: var(--text); }
+  .moment-box {
+    background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.3);
+    border-radius: 8px; padding: .8rem 1rem; margin: .8rem 0;
+    display: flex; gap: .6rem; align-items: flex-start; font-size: .88rem;
+  }
+  .moment-box .icon { font-size: 1.1rem; flex-shrink: 0; }
+  .moment-box p { color: #fcd34d; margin: 0; }
+  .corr-row { display: flex; flex-wrap: wrap; gap: .5rem; margin: .8rem 0; }
+  .corr-tag { background: var(--surface2); border-radius: 6px; padding: .25rem .7rem; font-size: .82rem; }
+  .corr-tag.hi { color: var(--accent2); }
+  .corr-tag.lo { color: var(--text-muted); }
+  .impact-box {
+    background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.25);
+    border-radius: 8px; padding: .7rem 1rem; margin-top: .8rem; font-size: .88rem; color: var(--accent2);
+  }
+
+  /* CORR TABLE inside finding */
+  .corr-table { width: 100%; border-collapse: collapse; margin: .8rem 0; font-size: .85rem; }
+  .corr-table th { color: var(--accent); font-size: .78rem; text-align: left; padding: .4rem .6rem; border-bottom: 1px solid var(--border); }
+  .corr-table td { padding: .35rem .6rem; color: var(--text-muted); }
+  .corr-table .hi { color: var(--accent2); font-weight: 600; }
+  .corr-table .lo { color: #64748b; }
+
+  /* SPLIT GRID */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+  @media(max-width:600px){ .two-col { grid-template-columns: 1fr; } }
+  .col-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
+  .col-card h4 { font-size: .85rem; margin-bottom: .6rem; }
+
+  /* EVAL TABLE */
+  .eval-table { width: 100%; border-collapse: collapse; margin: 1.2rem 0; font-size: .88rem; }
+  .eval-table th { background: var(--surface2); color: var(--accent); padding: .55rem .8rem; text-align: left; }
+  .eval-table td { padding: .5rem .8rem; border-bottom: 1px solid var(--border); color: var(--text-muted); }
+  .eval-table .highlight { color: var(--accent2); font-weight: 600; }
+  .eval-table .warn { color: #f59e0b; }
+
+  /* IMPORTANCE SPLIT */
+  .importance-split { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.2rem 0; }
+  @media(max-width:580px){ .importance-split { grid-template-columns: 1fr; } }
+  .imp-group { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .imp-group-header { padding: .5rem 1rem; font-size: .8rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+  .imp-group.weather .imp-group-header { background: rgba(59,130,246,.2); color: var(--accent); }
+  .imp-group.building .imp-group-header { background: rgba(100,116,139,.15); color: var(--text-muted); }
+  .imp-row { display: flex; justify-content: space-between; align-items: center; padding: .4rem 1rem; border-top: 1px solid var(--border); font-size: .85rem; }
+  .imp-row .bar-wrap { flex: 1; margin: 0 .8rem; height: 6px; background: var(--surface2); border-radius: 3px; }
+  .imp-row .bar { height: 100%; border-radius: 3px; }
+  .imp-group.weather .bar { background: var(--accent); }
+  .imp-group.building .bar { background: #475569; }
+
+  /* QUOTE */
+  .quote { border-left: 3px solid var(--accent); padding: .6rem 1.2rem; margin: 1.2rem 0; font-style: italic; color: var(--text-muted); font-size: .95rem; }
+
+  /* CLUSTER */
+  .cluster-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.2rem 0; }
+  @media(max-width:600px){ .cluster-grid { grid-template-columns: 1fr; } }
+  .cluster-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem; text-align: center; }
+  .cluster-card .emoji { font-size: 1.5rem; margin-bottom: .5rem; }
+  .cluster-card h4 { font-size: .9rem; margin-bottom: .4rem; }
+  .cluster-card .num { font-size: 1.3rem; font-weight: 700; color: var(--accent2); }
+  .cluster-card p { font-size: .8rem; margin: 0; }
+
+  /* ESS PARAMS */
+  .params-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .5rem; margin: 1rem 0; }
+  @media(max-width:500px){ .params-grid { grid-template-columns: 1fr; } }
+  .param-row { background: var(--surface2); border-radius: 6px; padding: .5rem .8rem; font-size: .85rem; display: flex; justify-content: space-between; }
+  .param-row .pk { color: var(--text-muted); }
+  .param-row .pv { color: var(--text); font-weight: 600; }
+
+  /* RESULT CARDS */
+  .result-num { font-size: 2.5rem; font-weight: 800; color: var(--accent); line-height: 1; margin-bottom: .3rem; }
+  .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0; }
+  @media(max-width:600px){ .result-grid { grid-template-columns: 1fr; } }
+  .result-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem; text-align: center; }
+  .result-card p { font-size: .82rem; margin: 0; }
+
+  /* CONCLUSION */
+  .conclusion-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1.5rem; }
+  @media(max-width:600px){ .conclusion-grid { grid-template-columns: 1fr; } }
+  .conclusion-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.3rem; }
+  .conclusion-card .icon { font-size: 1.4rem; margin-bottom: .5rem; }
+  .conclusion-card h4 { font-size: .9rem; font-weight: 700; margin-bottom: .4rem; }
+  .conclusion-card p { font-size: .83rem; margin: 0; }
+
+  /* LIMIT */
+  .limit-item { background: var(--surface); border-left: 3px solid var(--accent3); border-radius: 0 10px 10px 0; padding: 1rem 1.3rem; margin-bottom: 1rem; }
+  .limit-item h4 { color: var(--accent3); font-size: .9rem; margin-bottom: .3rem; }
+  .limit-item p { font-size: .87rem; margin: 0; }
+
+  /* FOOTER */
+  footer { text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: .82rem; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<!-- ───── HERO ───── -->
+<div class="hero">
+  <div class="hero-label">Urban Energy Digital Twin · 마곡동</div>
+  <h1>머신러닝으로 예측하고<br><em>ESS로 대응하는</em><br>3D 도시 전력 디지털트윈</h1>
+  <p>마곡동 11,358개 건물의 에너지 데이터를 ML로 예측·군집화하고, 공용 ESS의 피크 대응 효과를 3D 디지털트윈 위에서 시뮬레이션합니다.</p>
+  <div class="tag-row">
+    <span class="tag">XGBoost / LightGBM</span>
+    <span class="tag">K-Means Clustering</span>
+    <span class="tag">ESS Peak Shaving</span>
+    <span class="tag">CesiumJS 3D</span>
+    <span class="tag">11,358 buildings</span>
+    <span class="tag">UTM-K → WGS84</span>
+  </div>
+  <div class="stats-row">
+    <div class="stat"><div class="stat-num">11,358</div><div class="stat-label">마곡 건물</div></div>
+    <div class="stat"><div class="stat-num">r = 0.70</div><div class="stat-label">기온–에너지 상관</div></div>
+    <div class="stat"><div class="stat-num">R² 0.69</div><div class="stat-label">XGBoost 예측력</div></div>
+    <div class="stat"><div class="stat-num">21%</div><div class="stat-label">ESS 피크 저감 (10%)</div></div>
+  </div>
+  <div class="scroll-hint">↓ scroll</div>
+</div>
+
+<!-- ───── 01 연구 선정 이유 ───── -->
+<section id="intro">
+  <div class="section-label">01</div>
+  <h2>연구 선정 이유</h2>
+  <p>한국의 연간 최대전력은 매년 7~8월 오후 발생. 도심 냉방 부하 완화 수단으로 ESS(에너지저장장치)가 주목받지만, "어디에 얼마짜리"는 도시 단위 정량 분석이 필요.</p>
+
+  <h3>초기에 설정한 연구질문</h3>
+  <table class="data-table">
+    <tr><th>RQ</th><th>질문</th></tr>
+    <tr><td>RQ 1</td><td>마곡동 건물별 전력 수요를 머신러닝으로 예측할 수 있는가?</td></tr>
+    <tr><td>RQ 2</td><td>어느 시점·어느 건물이 피크 부하를 형성하는가?</td></tr>
+    <tr><td>RQ 3</td><td>공용 ESS를 두면 마곡동 피크는 얼마나 완화되는가?</td></tr>
+    <tr><td>RQ 4</td><td>위 결과를 3D 디지털트윈으로 통합 시각화할 수 있는가?</td></tr>
+  </table>
+
+  <p>처음에는 "건물 크기·층수·높이가 에너지를 결정한다"는 직관적 모델을 세우고 시작했습니다. 그런데 데이터를 직접 까보면서 그 가설이 무너졌고, 그 무너짐 자체가 이 프로젝트의 핵심 발견이 되었습니다.</p>
+
+  <div class="flow">
+    <div class="flow-step">01 데이터통합</div><div class="flow-arrow">→</div>
+    <div class="flow-step">02 탐색발견</div><div class="flow-arrow">→</div>
+    <div class="flow-step">03 ML예측</div><div class="flow-arrow">→</div>
+    <div class="flow-step">04 군집화</div><div class="flow-arrow">→</div>
+    <div class="flow-step">05 ESS시뮬레이션</div><div class="flow-arrow">→</div>
+    <div class="flow-step">06 3D디지털트윈</div>
+  </div>
+
+  <div class="ess-box">
+    <div class="ess-icon">🔋</div>
+    <div>
+      <h3 style="color:var(--accent3);margin-bottom:.3rem">ESS란? Energy Storage System · 에너지저장장치</h3>
+      <p style="margin:0;font-size:.9rem">전기가 남을 때(밤·새벽) 저장해두었다가, 부족할 때(낮 피크) 방출하여 전력망의 부담을 완화하는 장치. 거대한 충전식 배터리로 이해하면 됩니다.</p>
+    </div>
+    <div class="ess-cycle">
+      <span>🌙 저전력 시간 — 충전 ↓</span>
+      <span style="text-align:center;font-size:1.2rem">⚡ ESS ⚡</span>
+      <span>☀️ 피크 시간 — 방전 ↑</span>
+    </div>
+  </div>
+</section>
+
+<!-- ───── 02 데이터 ───── -->
+<section id="data">
+  <div class="section-label">02</div>
+  <h2>사용 데이터</h2>
+
+  <div class="stats-row" style="justify-content:flex-start;margin-bottom:2rem">
+    <div class="stat"><div class="stat-num">11,358</div><div class="stat-label">마곡 건물</div></div>
+    <div class="stat"><div class="stat-num">136,296</div><div class="stat-label">건물×월 레코드</div></div>
+    <div class="stat"><div class="stat-num">5종</div><div class="stat-label">기상 변수</div></div>
+    <div class="stat"><div class="stat-num">2019–24</div><div class="stat-label">기상 관측</div></div>
+  </div>
+
+  <h3>데이터 구성</h3>
+  <table class="data-table">
+    <thead><tr><th>데이터</th><th>출처</th><th>변수</th><th>해상도</th></tr></thead>
+    <tbody>
+      <tr><td>건물·에너지</td><td>서울시 API</td><td>건물번호·명·층수·높이·면적·좌표·월별 에너지량(1~12월)</td><td>월별</td></tr>
+      <tr><td>기상</td><td>기상청</td><td>기온·습도·강수·일조·풍속</td><td>월별</td></tr>
+      <tr><td>공간</td><td>건물 좌표</td><td>UTM-K(EPSG:5179) 평면좌표 → WGS84 변환</td><td>건물 단위</td></tr>
+    </tbody>
+  </table>
+
+  <h3>전처리 핵심 결정들</h3>
+  <ul>
+    <li>강서구(법정동코드 11500)로 1차 필터링 → 마곡동 좌표 범위로 2차 추출.</li>
+    <li>같은 좌표의 중복 행 제거(128행).</li>
+    <li>월별 에너지를 long format으로 변환: (건물, 월, 에너지) → ML/시각화 표준 입력.</li>
+    <li>기상은 일자별 데이터를 월별로 집계. 기온·습도·일조·풍속은 평균, 강수는 합계.</li>
+    <li>파생변수: <strong>CDD</strong>(냉방도일, 기온−18°C 양수), <strong>HDD</strong>(난방도일, 18−기온 양수). 월평균 기반 근사.</li>
+  </ul>
+</section>
+
+<!-- ───── 03 핵심 발견 ───── -->
+<section id="findings">
+  <div class="section-label">03</div>
+  <h2>핵심 발견</h2>
+
+  <div class="findings-grid">
+
+    <!-- F01 -->
+    <div class="finding-card">
+      <div class="finding-num">Finding 01</div>
+      <div class="finding-title">'음영도' 컬럼은 사실 자치구 코드였다</div>
+      <div class="moment-box"><span class="icon">⚡</span><p>Moment: 음영도 고유값을 세어보니 정확히 25개</p></div>
+      <p>음영도로 알고 받았으나 분포는 11110~11740의 25개 고유값 — 서울시 25개 자치구 법정동코드. 11110 = 종로구, 11140 = 중구, ..., 11500 = 강서구(마곡동 소속). 받은 자료가 마곡동만이 아니라 서울시 전체 건물 데이터였음.</p>
+      <div class="impact-box">→ 영향: 강서구(11500)로 1차 필터 → '마곡' 키워드 건물의 좌표 분포(1~99분위)로 경계 근사 → 약 11,358동의 마곡 데이터 확보. 행정경계가 아닌 통계적 근사로, 한계로 명시.</div>
+    </div>
+
+    <!-- F02 -->
+    <div class="finding-card">
+      <div class="finding-num">Finding 02</div>
+      <div class="finding-title">건물 특성으로는 에너지를 예측할 수 없다</div>
+      <div class="moment-box"><span class="icon">⚡</span><p>Moment: 면적 ~ 에너지 상관 r = 0.07</p></div>
+      <p>"큰 건물 = 많이 씀" 가설이 무너짐.</p>
+      <table class="corr-table">
+        <thead><tr><th>변수</th><th>상관</th><th>해석</th></tr></thead>
+        <tbody>
+          <tr><td>건물면적</td><td class="lo">r = 0.07</td><td>사실상 무관</td></tr>
+          <tr><td>층수</td><td class="lo">r = 0.03</td><td>사실상 무관</td></tr>
+          <tr><td>건물높이</td><td class="lo">r = 0.03</td><td>사실상 무관</td></tr>
+        </tbody>
+      </table>
+      <div class="impact-box">→ 영향: ML 입력을 "건물 특성" → "기상"으로 전환. 목표도 "개별 건물 예측" → "도시 단위 계절 예측"으로 재정의.</div>
+    </div>
+
+    <!-- F03 -->
+    <div class="finding-card">
+      <div class="finding-num">Finding 03</div>
+      <div class="finding-title">에너지는 사실상 '기온(계절)' 하나로 설명된다</div>
+      <div class="moment-box"><span class="icon">⚡</span><p>Moment: 기온 ~ 에너지 상관 r = 0.70 (압도적)</p></div>
+      <p>월별 평균: 1월 17.8 → 6월 143.3 → 12월 20.9. 여름 단봉형.</p>
+      <table class="corr-table">
+        <thead><tr><th>기상 변수</th><th>상관</th></tr></thead>
+        <tbody>
+          <tr><td>기온</td><td class="hi">r = 0.70</td></tr>
+          <tr><td>강수</td><td class="hi">r = 0.59</td></tr>
+          <tr><td>습도</td><td>r = 0.40</td></tr>
+          <tr><td>일조</td><td class="lo">r ≈ 0.06</td></tr>
+          <tr><td>풍속</td><td class="lo">r ≈ 0.01</td></tr>
+        </tbody>
+      </table>
+      <div class="impact-box">→ 영향: 여름 단봉형 = 전기 위주(난방=가스 누락). ESS도 냉방 피크 대응에 초점.</div>
+    </div>
+
+    <!-- F04 -->
+    <div class="finding-card">
+      <div class="finding-num">Finding 04</div>
+      <div class="finding-title">강수가 1위 변수로 나왔지만, 그건 다중공선성 신호였다</div>
+      <div class="moment-box"><span class="icon">⚡</span><p>Moment: 기상 변수 간 상관 0.79~0.89 (다중공선성)</p></div>
+      <p>XGBoost 첫 결과 강수 1위 → 비현실적. 변수 간 상관 0.8↑ → 기온·습도·강수 모두 "여름" 신호의 중복.</p>
+      <table class="corr-table">
+        <thead><tr><th></th><th>기온</th><th>습도</th><th>강수</th><th>에너지</th></tr></thead>
+        <tbody>
+          <tr><td>기온</td><td>1.00</td><td>0.79</td><td>0.85</td><td class="hi">0.70</td></tr>
+          <tr><td>습도</td><td>0.79</td><td>1.00</td><td>0.89</td><td>0.40</td></tr>
+          <tr><td>강수</td><td>0.85</td><td>0.89</td><td>1.00</td><td>0.59</td></tr>
+        </tbody>
+      </table>
+      <div class="impact-box">→ 영향: 강수·습도 제외 후 기온 단독 R² 동일. 최종 변수 CDD + HDD + 면적으로 단순화.<br><br><em style="color:#94a3b8">"가장 단순한 모델이 가장 정직했고, 가장 정직한 모델이 가장 잘 일반화됐다."</em></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ───── 04 방법론 ───── -->
+<section id="method">
+  <div class="section-label">04</div>
+  <h2>분석 방법론</h2>
+  <p>알고리즘 선택보다 평가 설계가 결과의 신뢰도를 결정. 파이프라인: 병합 → 탐색 → ML 예측(3가지 분할 비교) → 군집화(K-Means) → ESS 시뮬레이션 → 3D 디지털트윈.</p>
+
+  <h3>평가 설계 — 같은 모델, 다른 분할</h3>
+  <table class="eval-table">
+    <thead><tr><th>분할 방식</th><th>의미</th><th>R²</th><th>판단</th></tr></thead>
+    <tbody>
+      <tr><td>건물단위 5-fold</td><td>처음 보는 '건물' 예측력</td><td class="highlight">0.691</td><td>정직한 평가</td></tr>
+      <tr><td>무작위 5-fold</td><td>모든 행 무작위 분할</td><td class="warn">0.701</td><td>과대추정</td></tr>
+      <tr><td>월단위 분할</td><td>처음 보는 '계절' 예측력</td><td class="warn">0.054 (±0.88)</td><td>시계열 일반화 불가</td></tr>
+    </tbody>
+  </table>
+  <p>무작위 분할은 같은 달 데이터가 train·test 양쪽에 섞여 "월 평균 암기"가 일어난 과대추정입니다. 세 결과를 함께 봐야 "건물 예측은 되지만 시계열 일반화는 못한다"는 정직한 결론이 나옵니다.</p>
+
+  <h3>변수 구성 비교 (건물단위 5-fold)</h3>
+  <table class="eval-table">
+    <thead><tr><th>변수 구성</th><th>R²</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>전체(기온+습도+강수+면적+층수+높이+월)</td><td>0.687</td><td>기본</td></tr>
+      <tr><td>기온만</td><td>0.668</td><td>단변수 베이스라인</td></tr>
+      <tr><td>기온+습도+강수</td><td>0.668</td><td>강수·습도 추가해도 동일 = 정보 중복</td></tr>
+      <tr><td>CDD만</td><td>0.526</td><td>냉방만 — 겨울 정보 손실</td></tr>
+      <tr><td class="highlight">CDD + HDD + 면적</td><td class="highlight">0.687</td><td class="highlight">물리해석 명확, 권장 구성</td></tr>
+    </tbody>
+  </table>
+  <div class="quote">마곡 에너지 ≈ 기온(계절) 하나로 거의 모두 설명되며, CDD·HDD는 같은 정보를 물리적으로 해석 가능한 형태로 표현한 것.</div>
+</section>
+
+<!-- ───── 05 머신러닝 ───── -->
+<section id="ml">
+  <div class="section-label">05</div>
+  <h2>머신러닝 모델링</h2>
+
+  <h3>모델 선택</h3>
+  <ul>
+    <li>트리 부스팅 선택: 비선형 패턴 포착, 해석 도구 풍부, 안정성.</li>
+    <li>주 모델: <strong>XGBoost</strong> (n_estimators=300, max_depth=4, learning_rate=0.08)</li>
+    <li>비교군: sklearn GradientBoostingRegressor, 선형회귀(baseline)</li>
+    <li>특성: CDD, HDD, 건물면적, 월(정수 그대로) / 대상: 월별 에너지사용량(회귀)</li>
+  </ul>
+
+  <h3>변수 중요도 — 두 그룹의 명확한 차이</h3>
+  <div class="importance-split">
+    <div class="imp-group weather">
+      <div class="imp-group-header">🌡️ 기상·계절 변수 (영향 큼)</div>
+      <div class="imp-row"><span>강수_mm</span><div class="bar-wrap"><div class="bar" style="width:100%"></div></div><span>0.292</span></div>
+      <div class="imp-row"><span>기온_C</span><div class="bar-wrap"><div class="bar" style="width:95%"></div></div><span>0.277</span></div>
+      <div class="imp-row"><span>습도_pct</span><div class="bar-wrap"><div class="bar" style="width:77%"></div></div><span>0.226</span></div>
+      <div class="imp-row"><span>월</span><div class="bar-wrap"><div class="bar" style="width:66%"></div></div><span>0.194</span></div>
+    </div>
+    <div class="imp-group building">
+      <div class="imp-group-header">🏢 건물 특성 (거의 무영향)</div>
+      <div class="imp-row"><span>건물면적</span><div class="bar-wrap"><div class="bar" style="width:3%"></div></div><span>0.007</span></div>
+      <div class="imp-row"><span>건물높이</span><div class="bar-wrap"><div class="bar" style="width:1%"></div></div><span>≤0.002</span></div>
+      <div class="imp-row"><span>층수</span><div class="bar-wrap"><div class="bar" style="width:1%"></div></div><span>≤0.002</span></div>
+    </div>
+  </div>
+  <p style="font-size:.85rem">→ 기상 변수의 중요도는 건물 특성보다 약 <strong style="color:var(--accent)">40~100배</strong> 높음.</p>
+
+  <h3>예측 성능</h3>
+  <div class="stats-row" style="justify-content:flex-start">
+    <div class="stat"><div class="stat-num">0.691</div><div class="stat-label">R² (건물단위 5-fold)</div></div>
+    <div class="stat"><div class="stat-num">20.6</div><div class="stat-label">MAE</div></div>
+    <div class="stat"><div class="stat-num">+9%p</div><div class="stat-label">선형 baseline 대비</div></div>
+  </div>
+  <p style="margin-top:1rem">R² 0.69의 설명력은 대부분 건물 특성이 아닌 기상(계절)에서 옵니다. 이 모델은 사실상 "1월이면 낮고, 6월이면 높다"는 계절 패턴을 학습한 것에 가깝고, 이것이 "건물 개별성 예측은 어렵다"는 발견으로 이어져 다음 단계 군집화를 이끌었습니다.</p>
+
+  <h3>최종 모델</h3>
+  <pre style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;font-size:.85rem;color:#7dd3fc;overflow-x:auto">features = ["CDD", "HDD", "건물면적"]
+model    = XGBRegressor(n_estimators=300, max_depth=4)
+cv       = GroupKFold(5)  # 건물단위</pre>
+</section>
+
+<!-- ───── 06 군집화 ───── -->
+<section id="clustering">
+  <div class="section-label">06</div>
+  <h2>건물 군집화</h2>
+  <p>총량 기준으로 묶으면 "큰 건물 vs 작은 건물"만 갈립니다. 패턴 모양(여름 집중도)을 보려면 각 건물의 12개월 에너지를 합=1로 정규화한 뒤 K-Means를 적용합니다.</p>
+
+  <h3>k 결정 — 실루엣 vs 해석</h3>
+  <table class="eval-table">
+    <thead><tr><th>k</th><th>Inertia</th><th>Silhouette</th><th>해석</th></tr></thead>
+    <tbody>
+      <tr><td>2</td><td>10.5</td><td>0.616</td><td>"여름형/덜여름형" — 너무 단순</td></tr>
+      <tr><td class="highlight">3</td><td>7.4</td><td>0.466</td><td class="highlight">집중도 3단계로 해석 명확 (채택)</td></tr>
+      <tr><td>4</td><td>5.3</td><td>0.517</td><td>국소최대값이나 해석 모호</td></tr>
+      <tr><td>5</td><td>4.2</td><td>0.447</td><td>과분할</td></tr>
+    </tbody>
+  </table>
+  <p>실루엣은 k=2가 가장 높지만, 데이터 자체가 단봉형 단일 패턴이라 둘로 가르기 쉽기 때문. 해석 가능성을 위해 k=3 채택.</p>
+
+  <h3>예상과 달랐던 점</h3>
+  <ul>
+    <li>질적 유형 차이(여름형/겨울형/평탄형) 기대 → 실제는 모두 여름 단봉형, 강도만 다름.</li>
+    <li>겨울 비중 모든 군집 0.04~0.11로 매우 낮음 → 난방 피크 부재.</li>
+  </ul>
+
+  <h3>최종 군집 (강도 기반 k=3)</h3>
+  <div class="cluster-grid">
+    <div class="cluster-card">
+      <div class="emoji">☀️</div>
+      <h4>냉방집중형</h4>
+      <div class="num">1,131동</div>
+      <p>여름비중 0.54 / 평균 507<br>여름에 가장 몰림 → ESS 우선 대상</p>
+    </div>
+    <div class="cluster-card">
+      <div class="emoji">🌤️</div>
+      <h4>중간형</h4>
+      <div class="num">3,036동</div>
+      <p>여름비중 0.47 / 평균 838</p>
+    </div>
+    <div class="cluster-card">
+      <div class="emoji">📊</div>
+      <h4>분산형</h4>
+      <div class="num">7,191동</div>
+      <p>여름비중 0.41 / 평균 1,079<br>연중 비교적 고름</p>
+    </div>
+  </div>
+  <ul>
+    <li>여름 집중도와 연총량이 반비례 — 큰 건물 → 연중 꾸준 / 작은 건물 → 여름에 반짝.</li>
+    <li><strong>작은 건물이 ESS 적용 효과가 가장 큼</strong> (정책적 시사점).</li>
+  </ul>
+</section>
+
+<!-- ───── 07 ESS ───── -->
+<section id="ess">
+  <div class="section-label">07</div>
+  <h2>ESS 시나리오</h2>
+
+  <h3>설계 결정</h3>
+  <p>월별 데이터뿐이므로, 시간별 표준 프로파일 분해 방식을 채택해 "낮 피크를 깎는다"는 직관적 데모를 구현했습니다.</p>
+
+  <h3>ESS 파라미터 (동네 공용 1대 가정)</h3>
+  <div class="params-grid">
+    <div class="param-row"><span class="pk">설치 위치</span><span class="pv">마곡 중앙 (위경도 평균점)</span></div>
+    <div class="param-row"><span class="pk">배터리 용량</span><span class="pv">일에너지의 1~30%로 비교</span></div>
+    <div class="param-row"><span class="pk">최대 충/방전 전력</span><span class="pv">용량의 40%</span></div>
+    <div class="param-row"><span class="pk">충방전 효율</span><span class="pv">95%</span></div>
+    <div class="param-row"><span class="pk">SOC 운용 범위</span><span class="pv">20~90%</span></div>
+    <div class="param-row"><span class="pk">운영 규칙</span><span class="pv">threshold 초과 시 방전, 미만 시 충전</span></div>
+  </div>
+
+  <h3>배터리 용량별 피크 저감률</h3>
+  <table class="eval-table">
+    <thead><tr><th>용량</th><th>저감률</th><th>증분</th><th>해석</th></tr></thead>
+    <tbody>
+      <tr><td>1%</td><td>4.7%</td><td>기준</td><td>최소</td></tr>
+      <tr><td>5%</td><td>13.2%</td><td>+7.0%p</td><td>효율적</td></tr>
+      <tr><td class="highlight">10%</td><td class="highlight">21.0%</td><td class="highlight">+7.8%p</td><td class="highlight">권장 (변곡점)</td></tr>
+      <tr><td>20%</td><td>29.5%</td><td>+8.5%p</td><td>한계효용 감소</td></tr>
+      <tr><td>30%</td><td>38.5%</td><td>+9.0%p</td><td>비용 부담</td></tr>
+    </tbody>
+  </table>
+
+  <h3>용도 기준 vs 군집 기준 (배터리=일에너지 10%)</h3>
+  <table class="eval-table">
+    <thead><tr><th>기준</th><th>피크 저감률</th><th>적용 대상</th><th>한계</th></tr></thead>
+    <tbody>
+      <tr><td>용도 기준</td><td>15.6%</td><td>건물명으로 식별 가능한 약 40%</td><td>절반은 건물명 없음</td></tr>
+      <tr><td class="highlight">군집 기준</td><td class="highlight">21.0%</td><td>전 건물 (군집은 100% 적용)</td><td>빈틈 없음</td></tr>
+    </tbody>
+  </table>
+  <p>마곡 같은 신도시 단위에서 일에너지 10% 규모 공용 ESS를 두면 여름 피크의 약 1/5을 깎을 수 있다는 참고 수치.</p>
+</section>
+
+<!-- ───── 08 디지털트윈 ───── -->
+<section id="twin">
+  <div class="section-label">08</div>
+  <h2>3D 디지털트윈</h2>
+  <p>분석 결과를 실제 마곡 지도 위 인터랙티브 시뮬레이션으로 통합.</p>
+
+  <h3>기술 스택 선택</h3>
+  <table class="eval-table">
+    <thead><tr><th>후보</th><th>장점</th><th>단점</th><th>채택</th></tr></thead>
+    <tbody>
+      <tr><td>Pydeck</td><td>파이썬, 빠른 시작</td><td>3D 표현 제한</td><td>참고</td></tr>
+      <tr><td>Kepler.gl</td><td>코딩 거의 없음</td><td>커스텀 제한</td><td>고려</td></tr>
+      <tr><td class="highlight">CesiumJS + OSM Buildings</td><td>실제 3D 건물, 지구본 위 표현</td><td>토큰 필요, 학습곡선</td><td class="highlight">채택</td></tr>
+    </tbody>
+  </table>
+
+  <h3>좌표계 문제 — 추측을 사실로 교정</h3>
+  <p>EPSG:5186 추정 → 엉뚱한 곳. 후보 5개 역변환 검증 → 정답은 EPSG:5179 (UTM-K).</p>
+  <pre style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem;font-size:.85rem;color:#7dd3fc;overflow-x:auto">lon0 = 127.5;  lat0 = 38
+k0   = 0.9996; FE = 1000000;  FN = 2000000
+ellipsoid = "GRS80"</pre>
+
+  <h3>색상 매칭 전략 — 격자 기반</h3>
+  <p>OSM 건물과 1:1 매칭 불가 → 50m 격자로 나눠 위치 매칭. 전체 OSM 건물에 빈틈없이 색 부여. 단, 건물 단위가 아닌 격자 단위 근사라는 한계 명시.</p>
+
+  <h3>디지털트윈 핵심 기능</h3>
+  <div class="two-col">
+    <div class="col-card"><h4>📅 월 슬라이더 + 1년 재생</h4><p style="font-size:.85rem;color:var(--text-muted)">1~12월 슬라이더로 계절 변화 시각화. 각 건물의 그 달 실측 에너지가 색으로 표현.</p></div>
+    <div class="col-card"><h4>🌡️ 기온 시나리오 (-5 ~ +10°C)</h4><p style="font-size:.85rem;color:var(--text-muted)">ML 회귀계수(CDD/HDD)를 JS에 심어 실시간 재계산. "온난화 +3°C 시" 마곡 피크 변화 즉시 확인.</p></div>
+    <div class="col-card"><h4>🔋 ESS 설치 토글 + 시설 모델</h4><p style="font-size:.85rem;color:var(--text-muted)">버튼 클릭 시 마곡 중앙에 배터리 컨테이너 6개 + 관제타워 + 후광이 솟아오르는 ESS 단지 생성.</p></div>
+    <div class="col-card"><h4>⚡ 충방전 이펙트 + 빛줄기</h4><p style="font-size:.85rem;color:var(--text-muted)">충전 시 파란빛 수축, 방전 시 노란빛 확장 + 주변 피크 건물 14개로 흐르는 빛줄기(PolylineGlow).</p></div>
+    <div class="col-card"><h4>📊 실제 시뮬레이션 곡선 연동</h4><p style="font-size:.85rem;color:var(--text-muted)">용량 슬라이더(1~30%)가 실제 ESS 저감률 곡선(4.7%→38.5%)을 그대로 따름. 발표 숫자와 디지털트윈 숫자가 일치.</p></div>
+    <div class="col-card"><h4>🎬 시네마틱 인트로</h4><p style="font-size:.85rem;color:var(--text-muted)">로딩 시 멀리서 마곡동으로 카메라가 부드럽게 진입하며 디지털트윈 등장.</p></div>
+  </div>
+
+  <h3>배포 방식</h3>
+  <p>GitHub Pages 무료 호스팅 → 인터넷 되는 어느 컴퓨터에서든 URL로 접속. 발표장 컴퓨터에 별도 설치 불필요. Cesium Ion 무료 토큰으로 지도/지형 데이터 실시간 로드.</p>
+  <div style="text-align:center;margin-top:1.5rem">
+    <a href="#" style="display:inline-block;background:var(--accent);color:#fff;padding:.8rem 2rem;border-radius:8px;font-weight:700">🌍 디지털트윈 열기 →</a>
+  </div>
+</section>
+
+<!-- ───── 09 결과 ───── -->
+<section id="results">
+  <div class="section-label">09</div>
+  <h2>분석 결과</h2>
+
+  <div class="result-grid">
+    <div class="result-card"><div class="result-num">0.70</div><p>기온–에너지 r</p></div>
+    <div class="result-card"><div class="result-num">0.07</div><p>면적–에너지 r</p></div>
+    <div class="result-card"><div class="result-num">0.691</div><p>XGBoost R²</p></div>
+    <div class="result-card"><div class="result-num">21%</div><p>ESS 피크 저감 (10%)</p></div>
+    <div class="result-card"><div class="result-num">+11.4%</div><p>+5°C 시 피크 증가</p></div>
+    <div class="result-card"><div class="result-num">11,358</div><p>마곡 건물</p></div>
+  </div>
+
+  <h3>결과 ④ 기온 시나리오 — 온난화 영향 예측</h3>
+  <table class="eval-table">
+    <thead><tr><th>시나리오</th><th>6월 피크</th><th>현재 대비</th><th>같은 21% 저감 유지에 필요한 ESS</th></tr></thead>
+    <tbody>
+      <tr><td class="highlight">현재 (0°C)</td><td>147.1</td><td>기준</td><td>10.0%</td></tr>
+      <tr><td>+1°C</td><td>150.4</td><td>+2.3%</td><td>10.2%</td></tr>
+      <tr><td>+2°C</td><td>153.8</td><td>+4.5%</td><td>10.5%</td></tr>
+      <tr><td>+3°C</td><td>157.1</td><td>+6.8%</td><td>10.7%</td></tr>
+      <tr><td>+5°C</td><td>163.8</td><td>+11.4%</td><td>11.1%</td></tr>
+    </tbody>
+  </table>
+  <p>IPCC RCP 8.5 하 2050년 한국 기온 +3°C 전망 시 마곡 여름 피크가 6.8% 증가. 같은 21% 저감을 유지하려면 ESS 용량을 10% → 10.7%로 증설 필요.</p>
+
+  <h3>결과 ⑤ 한 페이지 결론</h3>
+  <div class="conclusion-grid">
+    <div class="conclusion-card"><div class="icon">🌡️</div><h4>기온 = 계절</h4><p>마곡 에너지는 기온이 거의 모두 설명(R²=0.69). 건물 특성(면적·층수)은 무관(r≈0.07).</p></div>
+    <div class="conclusion-card"><div class="icon">☀️</div><h4>6월 피크</h4><p>모든 건물이 동일한 여름 피크 구조. 차이는 강도뿐. 전기 위주(난방=가스 누락) 추정.</p></div>
+    <div class="conclusion-card"><div class="icon">🔋</div><h4>21% ↓</h4><p>일에너지 10% 공용 ESS로 마곡 피크 21% 저감. 냉방집중형 1,131동 우선.</p></div>
+    <div class="conclusion-card"><div class="icon">📈</div><h4>+6.8%</h4><p>+3°C 시 6월 피크 6.8% 증가. ESS 용량 약 7% 증설 필요(10→10.7%).</p></div>
+    <div class="conclusion-card"><div class="icon">🗺️</div><h4>3D Twin</h4><p>실제 마곡동 지도 위에서 월·기온·ESS를 슬라이더로 조절하며 모든 결과를 실시간 검증.</p></div>
+    <div class="conclusion-card"><div class="icon">⚖️</div><h4>정직성</h4><p>월별 데이터 한계, OSM 매칭 근사 등 모든 한계를 공개.</p></div>
+  </div>
+</section>
+
+<!-- ───── 10 한계 ───── -->
+<section id="limits">
+  <div class="section-label">10</div>
+  <h2>연구 한계</h2>
+  <p>학부 프로젝트 범위의 정직한 한계들.</p>
+
+  <div class="limit-item">
+    <h4>① 시간 해상도</h4>
+    <p>원자료가 월별 에너지뿐 → 시간별 부하는 외부 표준 프로파일 가정으로 합성. 실제 시간별 데이터 확보 시 정밀화 가능.</p>
+  </div>
+  <div class="limit-item">
+    <h4>② 에너지 단위 불명</h4>
+    <p>서울시 API 원자료의 정확한 단위·산출방식이 확정되지 않아, 절대값(kW) 대신 상대적 저감률(%)로 제시.</p>
+  </div>
+  <div class="limit-item">
+    <h4>③ 시계열 일반화의 한계</h4>
+    <p>월별 데이터가 12개월뿐이라 월단위 분할 평가에서 R²가 거의 0. 다년치 데이터 확보 시 시계열 모델로 확장 가능.</p>
+  </div>
+
+  <h3 style="margin-top:2rem">결론</h3>
+  <ol style="padding-left:1.3rem;color:var(--text-muted)">
+    <li style="margin-bottom:.6rem">마곡동은 냉방 의존형 에너지 구조로 여름 피크가 뚜렷하며, ML 분석(r=0.70)과 군집화에서 모두 일관되게 확인되었다.</li>
+    <li style="margin-bottom:.6rem">마곡 중앙에 일에너지 10% 규모 공용 ESS를 두면 여름 피크의 약 21%를 완화할 수 있다. 비용 대비 효율의 변곡점은 10~20% 구간이다.</li>
+    <li style="margin-bottom:.6rem">기온이 +3°C 오르면 같은 효과 유지에 약 7% 더 큰 ESS가 필요하다(10% → 10.7%). IPCC RCP 8.5 시나리오 대응 시 참고.</li>
+    <li>모든 결과는 3D 디지털트윈에서 월·기온·ESS를 직접 조절하며 실시간 검증 가능하다.</li>
+  </ol>
+</section>
+
+<footer>Urban Energy Digital Twin · 마곡동 &nbsp;|&nbsp; 2024</footer>
+
+</body>
+</html>
